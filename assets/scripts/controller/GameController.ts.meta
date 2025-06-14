@@ -1,0 +1,10 @@
+{
+  "ver": "1.1.0",
+  "uuid": "0c328f91-4836-4605-b5ef-385868601c35",
+  "importer": "asset",
+  "isPlugin": false,
+  "loadPluginInWeb": true,
+  "loadPluginInNative": true,
+  "loadPluginInEditor": false,
+  "subMetas": {}
+}
