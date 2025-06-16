@@ -1,41 +1,113 @@
-import { Board, Tile } from "../model/Board";
+import { GameConfig, Position } from "../GameConfig";
+import { Board } from "../model/Board";
 import { GameState } from "../model/GameState";
+import { Tile } from "../model/Tile";
+import { TileMatcher } from "../model/TileMatcher";
+import { TileFactory } from "../TileFactory";
+import { BoardView } from "../view/BoardView";
 
+// GameController.ts
 export class GameController {
-    public board: Board;
-    public state: GameState;
+    board: Board;
+    gameModel: any;
+    state: GameState;
+    tileMatcher: TileMatcher;
 
-    constructor(rows: number, cols: number, moves: number, targetScore: number) {
-        this.board = new Board(rows, cols);
-        this.state = new GameState(moves, targetScore);
+    constructor(
+        private boardView: BoardView,
+        private config: GameConfig
+    ) {
+        const tileFactory = new TileFactory(config);
+        this.board = new Board(config, tileFactory);
+        this.state = GameState.initial(config);
+        this.tileMatcher = new TileMatcher(config, this.board);
+        this.boardView.initialize(
+            config.horizontalTileCount,
+            config.verticalTileCount,
+            config.tileWidth,
+            config.tileHeight,
+            this.board,
+            this.handleTileClick.bind(this)
+        );
     }
 
-    // Только дополнение:
-    public burnWithAnimation(tiles: Tile[], onComplete: () => void) {
-        this.board.burnTiles(tiles);
-        this.state.moves--;
-        this.state.score += tiles.length * tiles.length;
-        onComplete();
+    private async handleTileClick(position: Position): Promise<void> {
+        // Обрабатываем клик в модели
+        this.selectTile(position);
+        
+        // Обновляем отображение с анимациями
+        await this.boardView.updateView(this.board);
+        
+        // // Проверяем состояние игры
+        // if (this.gameModel.isGameOver()) {
+        //     if (this.gameModel.isGameWon()) {
+        //         this.showGameWin();
+        //     } else {
+        //         this.showGameOver();
+        //     }
+        // }
     }
 
+    public selectTile(position: Position): void {
+        if (this.state.isGameOver) return;
 
-    public onTileClicked(row: number, col: number): string {
-        if (this.state.moves <= 0) return "No moves left";
-        const group = this.board.getMatchingGroup(row, col);
-        if (group.length < 2) return "Group too small";
+        const tile = this.board.getTileAt(position);
+        if (!tile) return;
 
-        this.board.burnTiles(group);
-        this.state.moves--;
-        this.state.score += group.length * group.length;
-
-        if (this.state.score >= this.state.targetScore) {
-            return "Victory!";
+        if (tile.isBooster()) {
+            this.handleBooster(tile);
+        } else if (tile.isSuperTile()) {
+            this.handleSuperTile(tile);
+        } else {
+            this.handleNormalTile(tile);
         }
 
-        if (this.state.moves === 0) {
-            return "Game Over";
+        //this.updateGameState();
+    }
+    handleBooster(tile: Tile) {
+        console.log("handleBooster");
+    }
+    handleSuperTile(tile: Tile) {
+        console.log("handleSuperTile");
+    }
+    updateGameState() {
+        throw new Error("Method not implemented.");
+    }
+
+    private handleNormalTile(tile: Tile): void {
+        const matches = this.tileMatcher.findMatches(tile);
+        if (matches.length < 2) return;
+
+        this.board.removeTiles(matches.map(m => m.position));
+        
+        // Создаем супер-тайл если нужно
+        if (matches.length >= this.config.superTileThreshold) {
+            this.board.createMegaTile(tile.position);
         }
 
-        return `Score: ${this.state.score}, Moves: ${this.state.moves}`;
+        this.state.update(
+            this.state.score + matches.length * matches.length * 10,
+            this.state.movesLeft - 1
+        );
+    }
+
+    public getBoardSnapshot(): Board {
+        return this.board.clone();
+    }
+
+    public isGameOver(): boolean {
+        return this.state.isGameOver;
+    }
+
+    public isGameWon(): boolean {
+        return this.state.isGameWon;
+    }
+
+    private showGameWin(): void {
+        // Показываем экран победы
+    }
+
+    private showGameOver(): void {
+        // Показываем экран проигрыша
     }
 }

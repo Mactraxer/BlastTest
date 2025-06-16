@@ -1,50 +1,111 @@
-import { TileColor } from "../model/Board";
+import { Position, TileType } from "../GameConfig";
+import { Tile } from "../model/Tile";
 
-const COLOR_MAP = {
-    [TileColor.Red]: cc.Color.RED,
-    [TileColor.Green]: cc.Color.GREEN,
-    [TileColor.Blue]: cc.Color.BLUE,
-    [TileColor.Yellow]: cc.Color.YELLOW,
-};
+const { ccclass, property } = cc._decorator;
 
-const {ccclass} = cc._decorator;
-
+// TileView.ts
 @ccclass
-export default class TileView extends cc.Component {
-    tileRow: number;
-    tileCol: number;
+export class TileView extends cc.Component {
+    @property(cc.Sprite)
+    private sprite: cc.Sprite = null;
 
-    public get width(): number {
-        return this.node.width;
+    @property(cc.Label)
+    private label: cc.Label = null;
+
+    public position: Position = null;
+    private _onTileClick: (pos: Position) => void = null;
+
+    public init(tile: Tile, position: Position, scale: cc.Vec2, onClick: (pos: Position) => void): void {
+        this.position = position;
+        this.node.position = cc.v3(position.x, position.y);
+        this.node.width = scale.x;
+        this.node.height = scale.y;
+        this._onTileClick = onClick;
+        this.node.on(cc.Node.EventType.TOUCH_END, this.onClick, this);
+        this.updateView(tile);
+        console.log("TilePosition: ", this.position);
+        console.log("TileType: ", tile.type);
     }
 
-    public get height(): number {
-        return this.node.height;
+    public updateView(tile: Tile | null): void {
+        if (!tile) {
+            this.node.active = false;
+            return;
+        }
+
+        console.log("TilePosition: ", this.position);
+        console.log("TileType: ", tile.type);
+        this.node.active = true;
+        
+        switch (tile.type) {
+            case TileType.RED:
+                this.sprite.node.color = cc.Color.RED;
+                //this.label.string = "";
+                break;
+            // ... другие типы тайлов
+            case TileType.BLUE:
+                this.sprite.node.color = cc.Color.BLUE;
+                break;
+            case TileType.GREEN:
+                this.sprite.node.color = cc.Color.GREEN;
+                break;
+            case TileType.YELLOW:
+                this.sprite.node.color = cc.Color.YELLOW;
+                break;
+            case  TileType.PURPLE:
+                this.sprite.node.color = cc.Color.CYAN;
+                break;
+            case TileType.BOMB:
+                this.sprite.node.color = cc.Color.ORANGE;
+                this.label.string = "B";
+                break;
+            case TileType.COL_CLEAR:
+                this.label.string = "CC";
+                this.sprite.node.color = cc.Color.ORANGE;
+                break;
+            case  TileType.ROW_CLEAR:
+                this.label.string = "RowC";
+                this.sprite.node.color = cc.Color.ORANGE;
+                break;
+            case TileType.RADIUS_CLEAR:
+                this.label.string = "RadC";
+                this.sprite.node.color = cc.Color.ORANGE;
+                break;
+            case TileType.SWAP:
+                this.label.string = "SW";
+                this.sprite.node.color = cc.Color.ORANGE;
+                break;
+            // ... остальные случаи
+        }
     }
 
-    public setTile(row: number, col: number, color: TileColor) {
-        this.tileRow = row;
-        this.tileCol = col;
-
-        const sprite = this.getComponent(cc.Sprite);
-        sprite.node.color = COLOR_MAP[color];
+    private onClick(): void {
+        if (this._onTileClick) {
+            this._onTileClick(this.position);
+        }
     }
 
-    public animateBurn(callback: () => void) {
-        cc.tween(this.node)
-            .to(0.2, { scale: 0 })
-            .call(() => callback && callback())
-            .start();
+    public animateRemove(): Promise<void> {
+        return new Promise(resolve => {
+            cc.tween(this.node)
+                .to(0.2, { scale: 0, opacity: 0 })
+                .call(() => {
+                    this.node.active = false;
+                    resolve();
+                })
+                .start();
+        });
     }
 
-    public animateFall(newY: number, delay: number = 0) {
-        cc.tween(this.node)
-            .delay(delay)
-            .to(0.3, { y: newY }, { easing: 'quadOut' })
-            .start();
-    }
-
-    onClick() {
-        this.node.emit("TileClicked", { row: this.tileRow, col: this.tileCol });
+    public animateAppear(): Promise<void> {
+        this.node.setScale(0);
+        this.node.active = true;
+        
+        return new Promise(resolve => {
+            cc.tween(this.node)
+                .to(0.3, { scale: 1 }, { easing: 'backOut' })
+                .call(resolve)
+                .start();
+        });
     }
 }

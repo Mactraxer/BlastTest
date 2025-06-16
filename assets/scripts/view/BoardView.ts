@@ -1,117 +1,126 @@
-//import { _decorator, Component, Node, Prefab, instantiate, Vec2, cclegacy, tween } from 'cc';
-import { Board, Tile, TileColor } from '../model/Board';
-import TileView from './TileView';
+import { GameConfig, Position } from "../GameConfig";
+import { Board } from "../model/Board";
+import { Tile } from "../model/Tile";
+import { TileView } from "./TileView";
 
-const { ccclass, property } = cc._decorator;
+const {ccclass, property} = cc._decorator;
 
-@ccclass('BoardView')
+// BoardView.ts
+@ccclass
 export class BoardView extends cc.Component {
     @property(cc.Prefab)
-    tilePrefab: cc.Prefab = null;
+    private tilePrefab: cc.Prefab = null;
 
-    board: Board;
-    tileSize = 60;
-    tileNodes: Map<string, cc.Node> = new Map();
+    private tileViews: TileView[][] = [];
+    private _onTileClick: (pos: Position) => void = null;
 
-    start() {
-        this.board = new Board(6, 6, [
-            TileColor.Red,
-            TileColor.Green,
-            TileColor.Blue,
-            TileColor.Yellow
-        ]);
-        this.renderBoard();
-    }
+    public initialize(width: number, height: number, tileWidth: number, tileHeight: number, board: Board, onTileClick: (pos: Position) => void): void {
+        this._onTileClick = onTileClick;
+        this.tileViews = [];
 
-    renderBoard() {
-        this.tileNodes.forEach(node => node.destroy());
-        this.tileNodes.clear();
-
-        for (let r = 0; r < this.board.rows; r++) {
-            for (let c = 0; c < this.board.cols; c++) {
-                const tile = this.board.getTile(r, c);
-                if (!tile) continue;
-
+        for (let row = 0; row < height; row++) {
+            this.tileViews[row] = [];
+            for (let collumn = 0; collumn < width; collumn++) {
                 const tileNode = cc.instantiate(this.tilePrefab);
                 tileNode.parent = this.node;
-
-                const pos = this.getPosition(r, c);
-                tileNode.setPosition(pos);
-
                 const tileView = tileNode.getComponent(TileView);
-                tileView.setTile(r, c, tile.color);
-                tileNode.on('TileClicked', this.handleTileClick, this);
-
-                this.tileNodes.set(`${r},${c}`, tileNode);
+                tileView.init(board.grid[row][collumn], board.grid[row][collumn].position, new cc.Vec2(tileWidth, tileHeight), this.handleTileClick.bind(this));
+                this.tileViews[row][collumn] = tileView;
             }
         }
     }
 
-    getPosition(row: number, col: number): cc.Vec2 {
-        const boardWidth = this.board.cols * this.tileSize;
-        const boardHeight = this.board.rows * this.tileSize;
-
-        const offsetX = -boardWidth / 2 + this.tileSize / 2;
-        const offsetY = -boardHeight / 2 + this.tileSize / 2;
-
-        return new cc.Vec2(
-            col * this.tileSize + offsetX,
-            row * this.tileSize + offsetY + 200
-        );
-    }
-
-    handleTileClick(tile: Tile) {
-        const group = this.board.getConnectedTiles(tile.row, tile.col);
-        if (group.length <= 1) return;
-
-        this.board.burnTiles(group);
-        for (const t of group) {
-            const key = `${t.row},${t.col}`;
-            const node = this.tileNodes.get(key);
-            if (node && cc.isValid(node)) {
-                this.tileNodes.delete(key);
-                cc.tween(node)
-                    .to(0.2, { scale: 0 })
-                    .call(() => node.destroy())
-                    .start();
-            }
+    private handleTileClick(position: Position): void {
+        if (this._onTileClick) {
+            this._onTileClick(position);
         }
-
-        this.scheduleOnce(() => {
-            const newTiles = this.board.dropAndFill();
-            this.updateTiles(newTiles);
-        }, 0.25);
     }
 
-    updateTiles(newTiles: Tile[]) {
-        for (let r = 0; r < this.board.rows; r++) {
-            for (let c = 0; c < this.board.cols; c++) {
-                const tile = this.board.getTile(r, c);
-                const key = `${r},${c}`;
-                if (!this.tileNodes.has(key) && tile) {
-                    const tileNode = cc.instantiate(this.tilePrefab);
-                    tileNode.parent = this.node;
-
-                    const startY = 800;
-                    const x = this.getPosition(r, c).x;
-                    tileNode.setPosition(x, startY);
-
-                    const view = tileNode.getComponent(TileView);
-                    view.setTile(tile.row, tile.col, tile.color);
-                    tileNode.on('TileClicked', this.handleTileClick, this);
-
-                    const targetY = this.getPosition(r, c).y;
-                    cc.tween(tileNode).to(0.3, { position: new cc.Vec3(x, targetY) }).start();
-
-                    this.tileNodes.set(key, tileNode);
-                } else {
-                    const node = this.tileNodes.get(key);
-                    if (node && cc.isValid(node)) {
-                        const targetPos = this.getPosition(r, c);
-                        cc.tween(node).to(0.2, { position: new cc.Vec3(targetPos.x, targetPos.y) }).start();
+    public async updateView(board: Board): Promise<void> {
+        const animations: Promise<void>[] = [];
+        
+        for (let row = 0; row < this.tileViews.length; row++) {
+            for (let collumn = 0; collumn < this.tileViews[row].length; collumn++) {
+                const tileView = this.tileViews[row][collumn];
+                const tile = board.getTileAt(tileView.position);
+                
+                if (tile) {
+                    tileView.updateView(tile);
+                    if (!tileView.node.active) {
+                        animations.push(tileView.animateAppear());
                     }
+                } else if (tileView.node.active) {
+                    animations.push(tileView.animateRemove());
                 }
             }
         }
+        
+        await Promise.all(animations);
+    }
+
+    // BoardView.ts
+    public async animateTileChanges(oldBoard: Board, newBoard: Board): Promise<void> {
+        const animations: Promise<void>[] = [];
+        
+        for (let y = 0; y < this.tileViews.length; y++) {
+            for (let x = 0; x < this.tileViews[y].length; x++) {
+                const position = this.tileViews[y][x].position;
+                const oldTile = oldBoard.getTileAt(position);
+                const newTile = newBoard.getTileAt(position);
+                
+                if (!oldTile && newTile) {
+                    // Появление нового тайла
+                    animations.push(this.animateTileAppear(position));
+                } else if (oldTile && !newTile) {
+                    // Исчезновение тайла
+                    animations.push(this.animateTileRemove(position));
+                } else if (oldTile && newTile && oldTile.type !== newTile.type) {
+                    // Изменение типа тайла
+                    animations.push(this.animateTileChange(position, newTile));
+                }
+            }
+        }
+        
+        await Promise.all(animations);
+    }
+
+    private animateTileAppear(position: Position): Promise<void> {
+        return new Promise(resolve => {
+            const tileView = this.tileViews[position.y][position.x];
+            tileView.node.setScale(0);
+            tileView.node.active = true;
+            
+            cc.tween(tileView.node)
+                .to(0.3, { scale: 1 }, { easing: 'backOut' })
+                .call(resolve)
+                .start();
+        });
+    }
+
+    private animateTileRemove(position: Position): Promise<void> {
+        return new Promise(resolve => {
+            const tileView = this.tileViews[position.y][position.x];
+            
+            cc.tween(tileView.node)
+                .to(0.2, { scale: 0, opacity: 0 })
+                .call(() => {
+                    tileView.node.active = false;
+                    resolve();
+                })
+                .start();
+        });
+    }
+
+    private animateTileChange(position: Position, newTile: Tile): Promise<void> {
+        return new Promise(resolve => {
+            const tileView = this.tileViews[position.y][position.x];
+            
+            cc.tween(tileView.node)
+                .to(0.1, { scale: 0 })
+                .call(() => tileView.updateView(newTile))
+                .to(0.1, { scale: 1 })
+                .call(resolve)
+                .start();
+        });
     }
 }

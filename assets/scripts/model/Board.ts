@@ -1,119 +1,138 @@
-export enum TileColor {
-    Red = "red",
-    Green = "green",
-    Blue = "blue",
-    Yellow = "yellow",
-}
+import { GameConfig, Position, TileType } from "../GameConfig";
+import { TileFactory } from "../TileFactory";
+import { Tile } from "./Tile";
 
-export class Tile {
-    constructor(public row: number, public col: number, public color: TileColor) {}
-}
-
+// Board.ts
 export class Board {
-    grid: (Tile | null)[][];
-    rows: number;
-    cols: number;
-    colors: TileColor[];
-
-    constructor(rows: number, cols: number, colors: TileColor[]) {
-        this.rows = rows;
-        this.cols = cols;
-        this.colors = colors;
-        this.grid = [];
-
-        this.generateBoard();
+    findMatches(tile: Tile) {
+        throw new Error("Method not implemented.");
     }
-
-    generateBoard() {
+    clone(): Board {
+        throw new Error("Method not implemented.");
+    }
+    public grid: Tile[][];
+    
+    constructor(
+        private readonly config: GameConfig,
+        private readonly tileFactory: TileFactory
+    ) {
+        this.initializeGrid();
+    }
+    
+    private initializeGrid(): void {
         this.grid = [];
-        for (let r = 0; r < this.rows; r++) {
-            const row: (Tile | null)[] = [];
-            for (let c = 0; c < this.cols; c++) {
-                const color = this.getRandomColor();
-                row.push(new Tile(r, c, color));
+        for (let row = 0; row < this.config.verticalTileCount; row++) {
+            this.grid[row] = [];
+            for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
+                this.grid[row][collumn] = this.tileFactory.createNormalTile(this.getPositionBy(row,collumn));
             }
-            this.grid.push(row);
         }
     }
-
-    getRandomColor(): TileColor {
-        const index = Math.floor(Math.random() * this.colors.length);
-        return this.colors[index];
+    
+    public createMegaTile(position: Position) {
+        const indexes = this.getIndexes(position);
+        this.grid[indexes[0]][indexes[1]] = this.tileFactory.createTileMegaTile(position);
     }
 
-    getTile(row: number, col: number): Tile | null {
-        if (row < 0 || row >= this.rows || col < 0 || col >= this.cols) return null;
-        return this.grid[row][col];
+    public getTileAt(position: Position): Tile | null {
+        if (!this.isPositionValid(position)) return null;
+        const indexes = this.getIndexes(position);
+        return this.grid[indexes[0]][indexes[1]];
     }
 
-    getConnectedTiles(row: number, col: number): Tile[] {
-        const startTile = this.getTile(row, col);
-        if (!startTile) return [];
-
-        const visited = new Set<string>();
-        const toVisit = [[row, col]];
-        const result: Tile[] = [];
-
-        while (toVisit.length > 0) {
-            const [r, c] = toVisit.pop()!;
-            const key = `${r},${c}`;
-            if (visited.has(key)) continue;
-
-            const tile = this.getTile(r, c);
-            if (!tile || tile.color !== startTile.color) continue;
-
-            visited.add(key);
-            result.push(tile);
-
-            toVisit.push([r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]);
-        }
-
-        return result;
+    public removeTiles(positions: Position[]): void {
+        positions.forEach(pos => {
+            if (this.isPositionValid(pos)) {
+                const indexes = this.getIndexes(pos);
+                this.grid[indexes[0]][indexes[1]] = null;
+            }
+        });
+        this.collapseColumns();
+        this.fillEmptySpaces();
     }
 
-    burnTiles(tiles: Tile[]) {
-        for (const tile of tiles) {
-            this.grid[tile.row][tile.col] = null;
-        }
-    }
+    private collapseColumns(): void {
+        for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
+        let emptyY = this.config.verticalTileCount;
+            // Идем снизу вверх
+            for (let row = 0; row < this.config.verticalTileCount; row++) {
+                // Находим первую пустую ячейку
+                if (this.grid[row][collumn] === null && emptyY === this.config.verticalTileCount) {
+                    emptyY = row;
+                }
+                // Если нашли тайл над пустой ячейкой
+                else if (this.grid[row][collumn] !== null && emptyY !== this.config.verticalTileCount) {
+                    // Перемещаем тайл вниз
+                    this.grid[emptyY][collumn] = this.grid[row][collumn];
+                    this.grid[emptyY][collumn].position = this.getPositionBy(emptyY, collumn);
+                    this.grid[row][collumn] = null;
 
-    dropAndFill(): Tile[] {
-        const newTiles: Tile[] = [];
-
-        for (let c = 0; c < this.cols; c++) {
-            let emptyRow = this.rows - 1;
-            for (let r = this.rows - 1; r >= 0; r--) {
-                if (this.grid[r][c] !== null) {
-                    if (emptyRow !== r) {
-                        this.grid[emptyRow][c] = this.grid[r][c];
-                        if (this.grid[emptyRow][c]) {
-                            this.grid[emptyRow][c]!.row = emptyRow;
-                            this.grid[emptyRow][c]!.col = c;
-                        }
-                        this.grid[r][c] = null;
+                    // // Ищем следующую пустую ячейку выше
+                    while (emptyY < this.config.verticalTileCount && this.grid[emptyY][collumn] !== null) {
+                        emptyY++;
                     }
-                    emptyRow--;
                 }
             }
-
-            for (let r = emptyRow; r >= 0; r--) {
-                const color = this.getRandomColor();
-                const newTile = new Tile(r, c, color);
-                this.grid[r][c] = newTile;
-                newTiles.push(newTile);
-            }
         }
-
-        return newTiles;
     }
 
-    hasAvailableMoves(): boolean {
-        for (let r = 0; r < this.rows; r++) {
-            for (let c = 0; c < this.cols; c++) {
-                const connected = this.getConnectedTiles(r, c);
-                if (connected.length > 1) return true;
+    public getIndexes(position: Position): [number, number] {
+        const collumn = position.x / this.config.tileWidth;
+        const row = position.y / this.config.tileHeight;
+        return [row, collumn];
+    }
+
+    public getPositionBy(row: number, collumn: number): Position {
+        return new Position(collumn * this.config.tileHeight, row * this.config.tileWidth);
+    }
+
+    public getTopNeighborsPosition(position: Position): Position | null {
+        const indexes = this.getIndexes(position);
+
+        if (indexes[0] == 0) return null;
+
+        return this.getPositionBy(indexes[0] - 1, indexes[1]);
+    }
+
+    public getBottomNeighborsPosition(position: Position): Position {
+        const indexes = this.getIndexes(position);
+
+        if (indexes[0] == this.config.verticalTileCount - 1) return null;
+
+        return this.getPositionBy(indexes[0] + 1, indexes[1]);
+    }
+
+    public getLeftNeighborsPosition(position: Position): Position {
+        const indexes = this.getIndexes(position);
+
+        if (indexes[1] == 0) return null;
+
+        return this.getPositionBy(indexes[0], indexes[1] - 1);
+    }
+
+    public getRightNeighborsPosition(position: Position): Position {
+        const indexes = this.getIndexes(position);
+
+        if (indexes[1] == this.config.horizontalTileCount - 1) return null;
+
+        return this.getPositionBy(indexes[0], indexes[1] + 1);
+    }
+
+    // Board.ts
+    private fillEmptySpaces(): void {
+        for (let row = 0; row < this.config.verticalTileCount; row++) {
+            for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
+                if (this.grid[row][collumn] === null) {
+                    this.grid[row][collumn] = this.tileFactory.createNormalTile(this.getPositionBy(row, collumn));
+                }
             }
         }
-        return false;
+    }
+
+    public isPositionValid(position: Position): boolean {
+        if (!position) return false;
+
+        return position.x >= 0 && position.x <= (this.config.horizontalTileCount - 1) * this.config.tileWidth  &&
+               position.y >= 0 && position.y <= (this.config.verticalTileCount - 1) * this.config.tileHeight;
     }
 }
