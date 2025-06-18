@@ -1,4 +1,4 @@
-import { GameConfig, Position } from "../GameConfig";
+import { Position } from "../GameConfig";
 import { Board, TileDropMove } from "../model/Board";
 import { Tile } from "../model/Tile";
 import { TileView } from "./TileView";
@@ -47,20 +47,75 @@ export class BoardView extends cc.Component {
             const tileView = this.tileViews.get(`${dropMove.fromRow},${dropMove.col}`);
             this.tileViews.delete(`${dropMove.fromRow},${dropMove.col}`);
             this.tileViews.set(`${dropMove.toRow},${dropMove.col}`, tileView);
+            tileView.updateView(dropMove.tile);
         }
     }
 
     public async updateView(board: Board): Promise<void> {
-        const animations: Promise<void>[] = [];
-        this.printGrid();
-        await this.animateCollapses(board.collapseTiles);
+        if (board.createdMegaTile) {
+            await this.animateCollapsesToMegaTile(board.collapseTiles, board.newMegaTileStartPosition);
+            this.updateMegaTileView(board.createdMegaTile, board.newMegaTileStartPosition);
+        } else {
+            await this.animateCollapses(board.collapseTiles);
+        }
+        await this.delay(200);
         this.updateCollapsedTiles(board.collapseTiles);
-        await this.animateFall(board.DropMoves);
-        this.updateFallenTiles(board.DropMoves);
+        await this.animateFall(board.dropMoves);
+        this.updateFallenTiles(board.dropMoves);
         this.addNewTileViews(board);
-        await this.animateDropNew(board.DropMoves);
+        await this.animateDropNew(board.dropMoves);
+        
+        this.printGrid();
+    }
 
+    private updateMegaTileView(createdMegaTile: Tile, newMegaTileStartPosition: Position) {
+        let megaTileView = this.tileViews.get(`${newMegaTileStartPosition.row},${newMegaTileStartPosition.col}`);
+        if (megaTileView) {
+            megaTileView.updateView(createdMegaTile);
+        }
+    }
+
+    public async animateCollapsesToMegaTile(collapseTiles: Tile[], megaTileStartPosition: Position) {
+        const animations: Promise<void>[] = [];
+
+        const centerPos = new cc.Vec3(megaTileStartPosition.x, megaTileStartPosition.y);
+
+        for (const tile of collapseTiles) {
+            const tileView = this.tileViews.get(`${tile.position.row},${tile.position.col}`);
+            if (!tileView) continue;
+
+            const node = tileView.node;
+
+            animations.push(new Promise(resolve => {
+                cc.tween(node)
+                    .to(0.3, { position: centerPos, scale: 0.3 }, { easing: 'backIn' }) // притягивание
+                    .call(() => {
+                        // Удаляем старый тайл визуально
+                        tileView.node.active = false;
+                        resolve();
+                    })
+                    .start();
+            }));
+        }
+
+        // Ждём завершения всех анимаций
         await Promise.all(animations);
+
+        // Здесь можно включить вспышку или масштаб мега-тайла
+        const megaTileView = this.tileViews.get(`${megaTileStartPosition.row},${megaTileStartPosition.col}`);
+        if (megaTileView) {
+            const megaTileAnimation = new Promise<void>(resolve => {
+                cc.tween(megaTileView.node)
+                    .to(0.2, { scale: 1.3 }, { easing: 'sineOut' })
+                    .to(0.2, { scale: 1.0 }, { easing: 'backIn' })
+                    .call(() => {
+                        resolve();
+                    })
+                    .start();
+            });
+
+            await megaTileAnimation;
+        }
     }
 
     public updateCollapsedTiles(collapseTiles: Tile[]) {
@@ -164,5 +219,9 @@ export class BoardView extends cc.Component {
         }
 
         this.debugBoard.string = rowString;
+    }
+
+    private delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }

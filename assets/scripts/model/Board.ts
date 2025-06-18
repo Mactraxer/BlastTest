@@ -12,9 +12,11 @@ export interface TileDropMove {
 
 // Board.ts
 export class Board {
-    collapseTiles: Tile[];
-    public DropMoves: TileDropMove[];
+    public collapseTiles: Tile[];
+    public dropMoves: TileDropMove[];
+    public createdMegaTile: Tile;
     public grid: Tile[][];
+    newMegaTileStartPosition: Position;
     
     constructor(
         public readonly config: GameConfig,
@@ -41,12 +43,16 @@ export class Board {
 
     public clearDropMoves() {
         this.collapseTiles = [];
-        this.DropMoves = [];
+        this.dropMoves = [];
+        this.createdMegaTile = null;
+        this.newMegaTileStartPosition = null;
     }
 
     public createMegaTile(position: Position) {
         const indexes = this.getIndexes(position);
+        this.newMegaTileStartPosition = this.grid[indexes[0]][indexes[1]].position;
         this.grid[indexes[0]][indexes[1]] = this.tileFactory.createTileMegaTile(position);
+        this.createdMegaTile = this.grid[indexes[0]][indexes[1]];
     }
 
     public getTileAt(position: Position): Tile | null {
@@ -71,7 +77,7 @@ export class Board {
         for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
         let emptyY = this.config.verticalTileCount;
             // Идем снизу вверх
-            for (let row = 0; row < this.config.verticalTileCount; row++) {
+            for (let row = this.config.verticalTileCount - 1; row >= 0; row--) {
                 // Находим первую пустую ячейку
                 if (this.grid[row][collumn] === null && emptyY === this.config.verticalTileCount) {
                     emptyY = row;
@@ -83,7 +89,7 @@ export class Board {
                     this.grid[emptyY][collumn].position = this.getPositionBy(emptyY, collumn);
                     this.grid[row][collumn] = null;
 
-                    this.DropMoves.push({
+                    this.dropMoves.push({
                         tile: this.grid[emptyY][collumn],
                         fromRow: row,
                         toRow: emptyY,
@@ -91,8 +97,8 @@ export class Board {
                         newPosition: this.getPositionBy(emptyY, collumn),
                     });
                     // // Ищем следующую пустую ячейку выше
-                    while (emptyY < this.config.verticalTileCount && this.grid[emptyY][collumn] !== null) {
-                        emptyY++;
+                    while (emptyY >= 0 && this.grid[emptyY][collumn] !== null) {
+                        emptyY--;
                     }
                 }
             }
@@ -108,7 +114,7 @@ export class Board {
                     const newPosition = this.getPositionBy(row, collumn);
                     this.grid[row][collumn] = this.tileFactory.createNormalTile(newPosition);
 
-                    this.DropMoves.push({
+                    this.dropMoves.push({
                         tile: this.grid[row][collumn],
                         fromRow: this.config.verticalTileCount,
                         toRow: row,
@@ -170,12 +176,14 @@ export class Board {
 
     public getIndexes(position: Position): [number, number] {
         const collumn = position.x / this.config.tileWidth;
-        const row = position.y / this.config.tileHeight;
+        const row = ((this.config.verticalTileCount - 1) * this.config.tileHeight - position.y)  / this.config.tileHeight;
         return [row, collumn];
     }
 
     public getPositionBy(row: number, collumn: number): Position {
-        return new Position(collumn * this.config.tileHeight, row * this.config.tileWidth, row, collumn);
+        let x = collumn * this.config.tileWidth;
+        let y = ((this.config.verticalTileCount - 1) - row) * this.config.tileHeight;
+        return new Position(x, y, row, collumn);
     }
 
     public getTopNeighborsPosition(position: Position): Position | null {

@@ -80,16 +80,18 @@ export class GameController {
     }
 
     private handleNormalTile(tile: Tile): void {
-        const matches = this.tileMatcher.findMatches(tile);
+        let matches = this.tileMatcher.findMatches(tile);
         if (matches.length < 2) return;
+
+        // Создаем супер-тайл если нужно
+        if (matches.length >= this.config.superTileThreshold) {
+            this.board.createMegaTile(tile.position);
+            matches = matches.filter(match => match !== tile)
+        }
 
         this.board.setCollapseTiles(matches);
         this.board.removeTiles(matches.map(m => m.position));
         
-        // Создаем супер-тайл если нужно
-        if (matches.length >= this.config.superTileThreshold) {
-            this.board.createMegaTile(tile.position);
-        }
 
         this.state.update(
             this.state.score + matches.length * matches.length * 10,
