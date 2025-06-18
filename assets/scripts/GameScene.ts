@@ -1,11 +1,15 @@
 import { GameController } from "./controller/GameController";
 import { BoardView } from "./view/BoardView";
 import { GameConfig } from "./GameConfig";
+import { TileViewFactory } from "./view/TileViewFactory";
 
 const {ccclass, property} = cc._decorator;
 // GameScene.ts
 @ccclass
 export class GameScene extends cc.Component {
+    @property(cc.Prefab)
+    private tilePrefab: cc.Prefab = null;
+
     @property(BoardView)
     private boardView: BoardView = null;
 
@@ -33,6 +37,7 @@ export class GameScene extends cc.Component {
         this.gameController = new GameController(
             this.boardView,
             config,
+            new TileViewFactory(this.tilePrefab)
         );
     }
 }

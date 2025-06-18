@@ -15,19 +15,27 @@ export class TileView extends cc.Component {
     public position: Position = null;
     private _onTileClick: (pos: Position) => void = null;
 
+    protected onDisable(): void {
+        this.node.off(cc.Node.EventType.TOUCH_END, this.onClick, this);
+    }
+
+    protected onEnable(): void {
+        this.node.on(cc.Node.EventType.TOUCH_END, this.onClick, this);
+    }
+
     public init(tile: Tile, position: Position, scale: cc.Vec2, onClick: (pos: Position) => void): void {
         this.position = position;
         this.node.position = cc.v3(position.x, position.y);
         this.node.width = scale.x;
         this.node.height = scale.y;
         this._onTileClick = onClick;
-        this.node.on(cc.Node.EventType.TOUCH_END, this.onClick, this);
         this.updateView(tile);
         console.log("TilePosition: ", this.position);
         console.log("TileType: ", tile.type);
     }
 
     public updateView(tile: Tile | null): void {
+        this.label.string = "";
         if (!tile) {
             this.node.active = false;
             return;
@@ -36,6 +44,7 @@ export class TileView extends cc.Component {
         console.log("TilePosition: ", this.position);
         console.log("TileType: ", tile.type);
         this.node.active = true;
+        this.position = tile.position;
         
         switch (tile.type) {
             case TileType.RED:
@@ -77,6 +86,8 @@ export class TileView extends cc.Component {
                 break;
             // ... остальные случаи
         }
+
+        this.label.string = tile.position.row + "," + tile.position.col;
     }
 
     private onClick(): void {

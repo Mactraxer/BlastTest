@@ -5,6 +5,7 @@ import { Tile } from "../model/Tile";
 import { TileMatcher } from "../model/TileMatcher";
 import { TileFactory } from "../TileFactory";
 import { BoardView } from "../view/BoardView";
+import { TileViewFactory } from "../view/TileViewFactory";
 
 // GameController.ts
 export class GameController {
@@ -12,16 +13,19 @@ export class GameController {
     gameModel: any;
     state: GameState;
     tileMatcher: TileMatcher;
+    tileMoves: import("c:/Users/Antonij/Projects/BlastTest/assets/scripts/model/Board").TileDropMove[];
 
     constructor(
         private boardView: BoardView,
-        private config: GameConfig
+        private config: GameConfig,
+        private tileViewFactory: TileViewFactory
     ) {
         const tileFactory = new TileFactory(config);
         this.board = new Board(config, tileFactory);
         this.state = GameState.initial(config);
         this.tileMatcher = new TileMatcher(config, this.board);
         this.boardView.initialize(
+            tileViewFactory,
             config.horizontalTileCount,
             config.verticalTileCount,
             config.tileWidth,
@@ -54,6 +58,7 @@ export class GameController {
         const tile = this.board.getTileAt(position);
         if (!tile) return;
 
+        this.board.clearDropMoves();
         if (tile.isBooster()) {
             this.handleBooster(tile);
         } else if (tile.isSuperTile()) {
@@ -78,6 +83,7 @@ export class GameController {
         const matches = this.tileMatcher.findMatches(tile);
         if (matches.length < 2) return;
 
+        this.board.setCollapseTiles(matches);
         this.board.removeTiles(matches.map(m => m.position));
         
         // Создаем супер-тайл если нужно
@@ -89,10 +95,6 @@ export class GameController {
             this.state.score + matches.length * matches.length * 10,
             this.state.movesLeft - 1
         );
-    }
-
-    public getBoardSnapshot(): Board {
-        return this.board.clone();
     }
 
     public isGameOver(): boolean {
