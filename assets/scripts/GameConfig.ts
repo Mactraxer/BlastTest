@@ -5,11 +5,10 @@ export enum TileType {
     GREEN,
     YELLOW,
     PURPLE,
-    BOMB,
-    SWAP,
     ROW_CLEAR,
     COL_CLEAR,
-    RADIUS_CLEAR
+    RADIUS_CLEAR,
+    BOMB,
 }
 
 // Position.ts
@@ -18,7 +17,7 @@ export class Position {
         public readonly x: number,
         public readonly y: number,
         public readonly row: number,
-        public readonly col: number
+        public readonly column: number
     ) {}
 }
 

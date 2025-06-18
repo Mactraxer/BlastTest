@@ -30,8 +30,6 @@ export class TileView extends cc.Component {
         this.node.height = scale.y;
         this._onTileClick = onClick;
         this.updateView(tile);
-        console.log("TilePosition: ", this.position);
-        console.log("TileType: ", tile.type);
     }
 
     public updateView(tile: Tile | null): void {
@@ -41,8 +39,6 @@ export class TileView extends cc.Component {
             return;
         }
 
-        console.log("TilePosition: ", this.position);
-        console.log("TileType: ", tile.type);
         this.node.active = true;
         this.position = tile.position;
         
@@ -80,14 +76,9 @@ export class TileView extends cc.Component {
                 this.label.string = "RadC";
                 this.sprite.node.color = cc.Color.ORANGE;
                 break;
-            case TileType.SWAP:
-                this.label.string = "SW";
-                this.sprite.node.color = cc.Color.ORANGE;
-                break;
-            // ... остальные случаи
         }
 
-        this.label.string = tile.position.row + "," + tile.position.col;
+        this.label.string = tile.position.row + "," + tile.position.column;
     }
 
     private onClick(): void {

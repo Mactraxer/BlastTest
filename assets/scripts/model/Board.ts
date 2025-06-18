@@ -16,7 +16,8 @@ export class Board {
     public dropMoves: TileDropMove[];
     public createdMegaTile: Tile;
     public grid: Tile[][];
-    newMegaTileStartPosition: Position;
+    public newMegaTileStartPosition: Position;
+    public swapTile: [Tile, Tile];
     
     constructor(
         public readonly config: GameConfig,
@@ -37,8 +38,12 @@ export class Board {
         this.clearDropMoves();
     }
     
-    setCollapseTiles(matches: Tile[]) {
+    public setCollapseTiles(matches: Tile[]) : void {
         this.collapseTiles = matches;
+    }
+
+    public addDropMoves(dropMoves: TileDropMove[]) : void {
+        this.dropMoves = dropMoves;
     }
 
     public clearDropMoves() {
@@ -46,6 +51,7 @@ export class Board {
         this.dropMoves = [];
         this.createdMegaTile = null;
         this.newMegaTileStartPosition = null;
+        this.swapTile = [null, null];
     }
 
     public createMegaTile(position: Position) {
@@ -194,7 +200,7 @@ export class Board {
         return this.getPositionBy(indexes[0] - 1, indexes[1]);
     }
 
-    public getBottomNeighborsPosition(position: Position): Position {
+    public getBottomNeighborsPosition(position: Position): Position | null {
         const indexes = this.getIndexes(position);
 
         if (indexes[0] == this.config.verticalTileCount - 1) return null;
@@ -202,7 +208,7 @@ export class Board {
         return this.getPositionBy(indexes[0] + 1, indexes[1]);
     }
 
-    public getLeftNeighborsPosition(position: Position): Position {
+    public getLeftNeighborsPosition(position: Position): Position | null {
         const indexes = this.getIndexes(position);
 
         if (indexes[1] == 0) return null;
@@ -210,7 +216,7 @@ export class Board {
         return this.getPositionBy(indexes[0], indexes[1] - 1);
     }
 
-    public getRightNeighborsPosition(position: Position): Position {
+    public getRightNeighborsPosition(position: Position): Position | null {
         const indexes = this.getIndexes(position);
 
         if (indexes[1] == this.config.horizontalTileCount - 1) return null;

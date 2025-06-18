@@ -15,14 +15,15 @@ export class Tile {
     ) {}
 
     public isBooster(): boolean {
-        return this.type === TileType.BOMB || this.type === TileType.SWAP;
+        return this.type === TileType.BOMB;
     }
 
     public isSuperTile(): boolean {
         return [
             TileType.ROW_CLEAR,
             TileType.COL_CLEAR,
-            TileType.RADIUS_CLEAR
+            TileType.RADIUS_CLEAR,
+            TileType.BOMB
         ].includes(this.type);
     }
 

@@ -45,6 +45,9 @@ export class BoardView extends cc.Component {
             if (dropMove.fromRow == this.board.config.verticalTileCount) continue;
             
             const tileView = this.tileViews.get(`${dropMove.fromRow},${dropMove.col}`);
+            if (tileView === null) {
+                console.log("tileView is null");
+            }
             this.tileViews.delete(`${dropMove.fromRow},${dropMove.col}`);
             this.tileViews.set(`${dropMove.toRow},${dropMove.col}`, tileView);
             tileView.updateView(dropMove.tile);
@@ -52,6 +55,8 @@ export class BoardView extends cc.Component {
     }
 
     public async updateView(board: Board): Promise<void> {
+        await this.animateSwap(board.swapTile[0], board.swapTile[1]);
+        this.updateSwapTiles(board.swapTile[0], board.swapTile[1]);
         if (board.createdMegaTile) {
             await this.animateCollapsesToMegaTile(board.collapseTiles, board.newMegaTileStartPosition);
             this.updateMegaTileView(board.createdMegaTile, board.newMegaTileStartPosition);
@@ -68,8 +73,41 @@ export class BoardView extends cc.Component {
         this.printGrid();
     }
 
+    private updateSwapTiles(tile1: Tile, tile2: Tile) : void {
+        if (!tile1 || !tile2) return;
+
+        const tileView1 = this.tileViews.get(`${tile1.position.row},${tile1.position.column}`);
+        const tileView2 = this.tileViews.get(`${tile2.position.row},${tile2.position.column}`);
+
+        this.tileViews.delete(`${tile1.position.row},${tile1.position.column}`);
+        this.tileViews.delete(`${tile2.position.row},${tile2.position.column}`);
+        
+        this.tileViews.set(`${tile1.position.row},${tile1.position.column}`, tileView2);
+        this.tileViews.set(`${tile2.position.row},${tile2.position.column}`, tileView1);
+
+        tileView1.updateView(tile2);
+        tileView2.updateView(tile1);
+    }
+
+    private async animateSwap(tile1: Tile, tile2: Tile) {
+        if (!tile1 || !tile2) return;
+
+        const node1 = this.tileViews.get(`${tile1.position.row},${tile1.position.column}`)?.node;
+        const node2 = this.tileViews.get(`${tile2.position.row},${tile2.position.column}`)?.node;
+
+        if (!node1 || !node2) return;
+
+        const pos1 = node1.position.clone();
+        const pos2 = node2.position.clone();
+
+        await Promise.all([
+            new Promise(resolve => cc.tween(node1).to(0.2, { position: pos2 }).call(resolve).start()),
+            new Promise(resolve => cc.tween(node2).to(0.2, { position: pos1 }).call(resolve).start()),
+        ]);
+    }
+
     private updateMegaTileView(createdMegaTile: Tile, newMegaTileStartPosition: Position) {
-        let megaTileView = this.tileViews.get(`${newMegaTileStartPosition.row},${newMegaTileStartPosition.col}`);
+        let megaTileView = this.tileViews.get(`${newMegaTileStartPosition.row},${newMegaTileStartPosition.column}`);
         if (megaTileView) {
             megaTileView.updateView(createdMegaTile);
         }
@@ -81,7 +119,7 @@ export class BoardView extends cc.Component {
         const centerPos = new cc.Vec3(megaTileStartPosition.x, megaTileStartPosition.y);
 
         for (const tile of collapseTiles) {
-            const tileView = this.tileViews.get(`${tile.position.row},${tile.position.col}`);
+            const tileView = this.tileViews.get(`${tile.position.row},${tile.position.column}`);
             if (!tileView) continue;
 
             const node = tileView.node;
@@ -102,7 +140,7 @@ export class BoardView extends cc.Component {
         await Promise.all(animations);
 
         // Здесь можно включить вспышку или масштаб мега-тайла
-        const megaTileView = this.tileViews.get(`${megaTileStartPosition.row},${megaTileStartPosition.col}`);
+        const megaTileView = this.tileViews.get(`${megaTileStartPosition.row},${megaTileStartPosition.column}`);
         if (megaTileView) {
             const megaTileAnimation = new Promise<void>(resolve => {
                 cc.tween(megaTileView.node)
@@ -120,8 +158,8 @@ export class BoardView extends cc.Component {
 
     public updateCollapsedTiles(collapseTiles: Tile[]) {
         for (const tile of collapseTiles) {
-            const tileView = this.tileViews.get(`${tile.position.row},${tile.position.col}`);
-            this.tileViews.delete(`${tile.position.row},${tile.position.col}`);
+            const tileView = this.tileViews.get(`${tile.position.row},${tile.position.column}`);
+            this.tileViews.delete(`${tile.position.row},${tile.position.column}`);
             this.tileViewFactory.dispose(tileView);
         }
     }
@@ -148,7 +186,6 @@ export class BoardView extends cc.Component {
 
         dropMoves.forEach(tile => {
             if (tile.fromRow === this.board.config.verticalTileCount) {
-                console.log("new tile in position =", tile.toRow, tile.col);
                 const tileView = this.tileViews.get(`${tile.toRow},${tile.col}`);
                 const node = tileView.node;
                 animations.push(new Promise(resolve => {
@@ -168,7 +205,7 @@ export class BoardView extends cc.Component {
         const animations: Promise<void>[] = [];
         collapseTiles.forEach(tile => {
             let i = 0;
-            const tileView = this.tileViews.get(`${tile.position.row},${tile.position.col}`);
+            const tileView = this.tileViews.get(`${tile.position.row},${tile.position.column}`);
             if (tileView) {
                 animations.push(new Promise(resolve => {
                     cc.tween(tileView.node)
@@ -195,7 +232,12 @@ export class BoardView extends cc.Component {
         for (const dropMove of dropMoves) {
             if (dropMove.fromRow == this.board.config.verticalTileCount) continue;
 
-            const node = this.tileViews.get(`${dropMove.fromRow},${dropMove.newPosition.col}`).node;
+            const tileView = this.tileViews.get(`${dropMove.fromRow},${dropMove.newPosition.column}`);
+            if (tileView === null) {
+                console.log("tileView is null");
+            }
+
+            const node = tileView.node;
             if (node && cc.isValid(node)) {
                 animations.push(new Promise(resolve => {
                     cc.tween(node)

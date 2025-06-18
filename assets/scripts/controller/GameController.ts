@@ -1,6 +1,9 @@
 import { GameConfig, Position } from "../GameConfig";
-import { Board } from "../model/Board";
+import { Board, TileDropMove } from "../model/Board";
+import { BoosterHandler } from "../model/BoosterHandler";
+import { BoosterType } from "../model/BoosterType";
 import { GameState } from "../model/GameState";
+import { SuperTileHandler } from "../model/SuperTileHandler";
 import { Tile } from "../model/Tile";
 import { TileMatcher } from "../model/TileMatcher";
 import { TileFactory } from "../TileFactory";
@@ -13,7 +16,9 @@ export class GameController {
     gameModel: any;
     state: GameState;
     tileMatcher: TileMatcher;
-    tileMoves: import("c:/Users/Antonij/Projects/BlastTest/assets/scripts/model/Board").TileDropMove[];
+    tileMoves: TileDropMove[];
+    superTileHandler: SuperTileHandler;
+    boosterHandler: BoosterHandler;
 
     constructor(
         private boardView: BoardView,
@@ -24,6 +29,8 @@ export class GameController {
         this.board = new Board(config, tileFactory);
         this.state = GameState.initial(config);
         this.tileMatcher = new TileMatcher(config, this.board);
+        this.superTileHandler = new SuperTileHandler(this.board, this.state);
+        this.boosterHandler = new BoosterHandler(this.board, this.state);
         this.boardView.initialize(
             tileViewFactory,
             config.horizontalTileCount,
@@ -37,10 +44,10 @@ export class GameController {
 
     private async handleTileClick(position: Position): Promise<void> {
         // Обрабатываем клик в модели
-        this.selectTile(position);
+        await this.selectTile(position);
         
         // Обновляем отображение с анимациями
-        await this.boardView.updateView(this.board);
+        
         
         // // Проверяем состояние игры
         // if (this.gameModel.isGameOver()) {
@@ -52,31 +59,45 @@ export class GameController {
         // }
     }
 
-    public selectTile(position: Position): void {
+    public handleTeleportButton() : void {
+        this.boosterHandler.selectBooster(BoosterType.Teleport);
+    }
+
+    public handleBoombButton() : void {
+        this.boosterHandler.selectBooster(BoosterType.Bomb);
+    }
+
+    public async selectTile(position: Position): Promise<void> {
         if (this.state.isGameOver) return;
 
+        
         const tile = this.board.getTileAt(position);
         if (!tile) return;
-
-        this.board.clearDropMoves();
-        if (tile.isBooster()) {
-            this.handleBooster(tile);
-        } else if (tile.isSuperTile()) {
+        
+        if (this.boosterHandler.isSelectedBooster()) {
+            this.boosterHandler.useActiveBoosterIn(tile);
+            //await this.boardView.updateView(this.board);
+            //this.board.clearDropMoves();
+        } else if(tile.isSuperTile()) {
             this.handleSuperTile(tile);
         } else {
             this.handleNormalTile(tile);
         }
 
+        await this.boardView.updateView(this.board);
         //this.updateGameState();
+
+        if (!this.boosterHandler.isSelectedBooster()) {
+            this.board.clearDropMoves();
+        }
     }
-    handleBooster(tile: Tile) {
-        console.log("handleBooster");
-    }
-    handleSuperTile(tile: Tile) {
-        console.log("handleSuperTile");
-    }
+
     updateGameState() {
         throw new Error("Method not implemented.");
+    }
+
+    private handleSuperTile(tile: Tile) : void {
+        this.superTileHandler.handleSuperTile(tile);
     }
 
     private handleNormalTile(tile: Tile): void {

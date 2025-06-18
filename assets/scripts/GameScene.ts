@@ -19,6 +19,12 @@ export class GameScene extends cc.Component {
     @property(cc.Label)
     private movesLabel: cc.Label = null;
 
+    @property(cc.Button)
+    private bombButton: cc.Button = null;
+
+    @property(cc.Button)
+    private teleportButton: cc.Button = null;
+
     private gameController: GameController;
 
     onLoad() {
@@ -31,7 +37,7 @@ export class GameScene extends cc.Component {
             targetScore: 1000,
             superTileThreshold: 3,
             bombRadius: 1,
-            superTileRadius: 2
+            superTileRadius: 1
         };
 
         this.gameController = new GameController(
@@ -39,5 +45,21 @@ export class GameScene extends cc.Component {
             config,
             new TileViewFactory(this.tilePrefab)
         );
+
+        this.bombButton.node.on(cc.Node.EventType.TOUCH_END, this.onTapBoombButton, this);
+        this.teleportButton.node.on(cc.Node.EventType.TOUCH_END, this.onTapTeleportButton, this);
+    }
+
+    protected onDestroy(): void {
+        this.bombButton.node.off(cc.Node.EventType.TOUCH_END, this.onTapBoombButton, this);
+        this.teleportButton.node.off(cc.Node.EventType.TOUCH_END, this.onTapTeleportButton, this);
+    }
+
+    public onTapBoombButton() {
+        this.gameController.handleBoombButton();
+    }
+
+    public onTapTeleportButton() {
+        this.gameController.handleTeleportButton();
     }
 }

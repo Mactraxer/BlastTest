@@ -11,9 +11,7 @@ export class TileFactory {
 
         if (rand < 0.7) {
             type = this.getRandomNormalType();
-        } else if (rand < 0.9) {
-            type = this.getRandomBoosterType();
-        } else {
+        }  else {
             type = this.getRandomSuperType();
         }
 
@@ -28,11 +26,7 @@ export class TileFactory {
         const rand = Math.random();
         let type: TileType;
 
-        if (rand < 0.5) {
-            type = this.getRandomBoosterType();
-        } else {
-            type = this.getRandomSuperType();
-        }
+        type = this.getRandomSuperType();
 
         return new Tile(type, position);
     }
@@ -41,10 +35,6 @@ export class TileFactory {
         const types = [TileType.RED, TileType.BLUE, TileType.GREEN, 
                       TileType.YELLOW, TileType.PURPLE];
         return types[Math.floor(Math.random() * types.length)];
-    }
-
-    private getRandomBoosterType(): TileType {
-        return Math.random() > 0.5 ? TileType.BOMB : TileType.SWAP;
     }
 
     private getRandomSuperType(): TileType {
