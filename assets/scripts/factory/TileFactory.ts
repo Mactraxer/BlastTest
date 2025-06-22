@@ -1,10 +1,6 @@
-import { GameConfig, Position, TileType } from "./GameConfig";
-import { Tile } from "./model/Tile";
+import { Position, Tile, TileType } from "../model/Tile";
 
-// TileFactory.ts
 export class TileFactory {
-    constructor(private readonly config: GameConfig) {}
-
     public createRandomTile(position: Position): Tile {
         const rand = Math.random();
         let type: TileType;
@@ -23,7 +19,6 @@ export class TileFactory {
     }
 
     public createTileMegaTile(position: Position): Tile {
-        const rand = Math.random();
         let type: TileType;
 
         type = this.getRandomSuperType();

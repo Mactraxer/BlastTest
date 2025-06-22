@@ -1,6 +1,6 @@
-import { GameConfig, Position, TileType } from "../GameConfig";
-import { TileFactory } from "../TileFactory";
-import { Tile } from "./Tile";
+import { GameConfig } from "../config/GameConfig";
+import { TileFactory } from "../factory/TileFactory";
+import { Position, Tile } from "./Tile";
 
 export interface TileDropMove {
     tile: Tile;
@@ -10,19 +10,21 @@ export interface TileDropMove {
     newPosition: Position;
 }
 
-// Board.ts
 export class Board {
+    private tileFactory: TileFactory;
+
+    public readonly config: GameConfig;
+
     public collapseTiles: Tile[];
     public dropMoves: TileDropMove[];
-    public createdMegaTile: Tile;
     public grid: Tile[][];
-    public newMegaTileStartPosition: Position;
     public swapTile: [Tile, Tile];
+    public createdMegaTile: Tile;
+    public createdMegaTileStartPosition: Position;
     
-    constructor(
-        public readonly config: GameConfig,
-        private readonly tileFactory: TileFactory
-    ) {
+    constructor(config: GameConfig, tileFactory: TileFactory) {
+        this.config = config;
+        this.tileFactory = tileFactory;
         this.initializeGrid();
     }
     
@@ -46,17 +48,17 @@ export class Board {
         this.dropMoves = dropMoves;
     }
 
-    public clearDropMoves() {
+    public clearDropMoves() : void {
         this.collapseTiles = [];
         this.dropMoves = [];
-        this.createdMegaTile = null;
-        this.newMegaTileStartPosition = null;
         this.swapTile = [null, null];
+        this.createdMegaTileStartPosition = null;
+        this.createdMegaTile = null;
     }
-
-    public createMegaTile(position: Position) {
+    
+    public createMegaTile(position: Position) : void {
         const indexes = this.getIndexes(position);
-        this.newMegaTileStartPosition = this.grid[indexes[0]][indexes[1]].position;
+        this.createdMegaTileStartPosition = position;
         this.grid[indexes[0]][indexes[1]] = this.tileFactory.createTileMegaTile(position);
         this.createdMegaTile = this.grid[indexes[0]][indexes[1]];
     }
@@ -77,107 +79,6 @@ export class Board {
 
         this.collapseColumns();
         this.fillEmptySpaces();
-    }
-
-    private collapseColumns(): void {
-        for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
-        let emptyY = this.config.verticalTileCount;
-            // Идем снизу вверх
-            for (let row = this.config.verticalTileCount - 1; row >= 0; row--) {
-                // Находим первую пустую ячейку
-                if (this.grid[row][collumn] === null && emptyY === this.config.verticalTileCount) {
-                    emptyY = row;
-                }
-                // Если нашли тайл над пустой ячейкой
-                else if (this.grid[row][collumn] !== null && emptyY !== this.config.verticalTileCount) {
-                    // Перемещаем тайл вниз
-                    this.grid[emptyY][collumn] = this.grid[row][collumn];
-                    this.grid[emptyY][collumn].position = this.getPositionBy(emptyY, collumn);
-                    this.grid[row][collumn] = null;
-
-                    this.dropMoves.push({
-                        tile: this.grid[emptyY][collumn],
-                        fromRow: row,
-                        toRow: emptyY,
-                        col: collumn,
-                        newPosition: this.getPositionBy(emptyY, collumn),
-                    });
-                    // // Ищем следующую пустую ячейку выше
-                    while (emptyY >= 0 && this.grid[emptyY][collumn] !== null) {
-                        emptyY--;
-                    }
-                }
-            }
-        }
-    }
-
-    
-    // Board.ts
-    private fillEmptySpaces(): void {
-        for (let row = 0; row < this.config.verticalTileCount; row++) {
-            for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
-                if (this.grid[row][collumn] === null) {
-                    const newPosition = this.getPositionBy(row, collumn);
-                    this.grid[row][collumn] = this.tileFactory.createNormalTile(newPosition);
-
-                    this.dropMoves.push({
-                        tile: this.grid[row][collumn],
-                        fromRow: this.config.verticalTileCount,
-                        toRow: row,
-                        col: collumn,
-                        newPosition: newPosition,
-                    });
-                }
-            }
-        }
-    }
-
-    // Замена this.collapseColumns(); this.fillEmptySpaces(); с учетом будущей анимации
-    public dropAndFill(): TileDropMove[] {
-        const moves: TileDropMove[] = [];
-
-        for (let col = 0; col < this.config.horizontalTileCount; col++) {
-            let emptyRow = this.config.verticalTileCount - 1;
-
-            for (let row = this.config.verticalTileCount - 1; row >= 0; row--) {
-                const tile = this.grid[row][col];
-                if (tile !== null) {
-                    if (emptyRow !== row) {
-                        this.grid[emptyRow][col] = tile;
-                        this.grid[row][col] = null;
-
-                        // Обновляем позицию тайла
-                        tile.position = this.getPositionBy(emptyRow, col);
-                        const newPosition = this.getPositionBy(emptyRow, col);
-                        moves.push({
-                            tile,
-                            fromRow: row,
-                            toRow: emptyRow,
-                            col,
-                            newPosition
-                        });
-                    }
-                    emptyRow--;
-                }
-            }
-
-            // Заполняем пустые ячейки сверху новыми тайлами
-            for (let row = emptyRow; row >= 0; row--) {
-                const newPosition = this.getPositionBy(row, col);
-                const newTile = this.tileFactory.createNormalTile(newPosition);
-                this.grid[row][col] = newTile;
-
-                moves.push({
-                    tile: newTile,
-                    fromRow: -1, // появился вне доски
-                    toRow: row,
-                    col,
-                    newPosition
-                });
-            }
-        }
-
-        return moves;
     }
 
     public getIndexes(position: Position): [number, number] {
@@ -229,5 +130,56 @@ export class Board {
 
         return position.x >= 0 && position.x <= (this.config.horizontalTileCount - 1) * this.config.tileWidth  &&
                position.y >= 0 && position.y <= (this.config.verticalTileCount - 1) * this.config.tileHeight;
+    }
+
+    private collapseColumns(): void {
+        for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
+        let emptyY = this.config.verticalTileCount;
+            // Идем снизу вверх
+            for (let row = this.config.verticalTileCount - 1; row >= 0; row--) {
+                // Находим первую пустую ячейку
+                if (this.grid[row][collumn] === null && emptyY === this.config.verticalTileCount) {
+                    emptyY = row;
+                }
+                // Если нашли тайл над пустой ячейкой
+                else if (this.grid[row][collumn] !== null && emptyY !== this.config.verticalTileCount) {
+                    // Перемещаем тайл вниз
+                    this.grid[emptyY][collumn] = this.grid[row][collumn];
+                    this.grid[emptyY][collumn].position = this.getPositionBy(emptyY, collumn);
+                    this.grid[row][collumn] = null;
+
+                    this.dropMoves.push({
+                        tile: this.grid[emptyY][collumn],
+                        fromRow: row,
+                        toRow: emptyY,
+                        col: collumn,
+                        newPosition: this.getPositionBy(emptyY, collumn),
+                    });
+                    // // Ищем следующую пустую ячейку выше
+                    while (emptyY >= 0 && this.grid[emptyY][collumn] !== null) {
+                        emptyY--;
+                    }
+                }
+            }
+        }
+    }
+
+    private fillEmptySpaces(): void {
+        for (let row = 0; row < this.config.verticalTileCount; row++) {
+            for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
+                if (this.grid[row][collumn] === null) {
+                    const newPosition = this.getPositionBy(row, collumn);
+                    this.grid[row][collumn] = this.tileFactory.createNormalTile(newPosition);
+
+                    this.dropMoves.push({
+                        tile: this.grid[row][collumn],
+                        fromRow: this.config.verticalTileCount,
+                        toRow: row,
+                        col: collumn,
+                        newPosition: newPosition,
+                    });
+                }
+            }
+        }
     }
 }

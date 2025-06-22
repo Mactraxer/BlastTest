@@ -1,12 +1,14 @@
-import { GameConfig, Position, TileType } from "../GameConfig";
+import { GameConfig } from "../config/GameConfig";
 import { Board } from "./Board";
-import { Tile } from "./Tile";
+import { Position, Tile, TileType } from "./Tile";
 
 export class TileMatcher {
-    constructor(
-        private readonly config: GameConfig,
-        private readonly board: Board
-    ) {
+    private readonly config: GameConfig;
+    private readonly board: Board;
+
+    constructor(config: GameConfig, board: Board) {
+        this.config = config;
+        this.board = board;
     }
 
     public findMatches(tile: Tile): Tile[] {
@@ -26,7 +28,7 @@ export class TileMatcher {
         type: TileType,
         visited: boolean[][],
         matches: Tile[]
-    ): void {
+    ) : void {
         if (!this.board.isPositionValid(position)) return;
         const tileIndexes = this.board.getIndexes(position);
         if (visited[tileIndexes[0]][tileIndexes[1]]) return;
@@ -37,7 +39,6 @@ export class TileMatcher {
         visited[tileIndexes[0]][tileIndexes[1]] = true;
         matches.push(tile);
         
-        // Проверяем соседей
         this.floodFill(this.board.getRightNeighborsPosition(position), type, visited, matches);
         this.floodFill(this.board.getLeftNeighborsPosition(position), type, visited, matches);
         this.floodFill(this.board.getBottomNeighborsPosition(position), type, visited, matches);

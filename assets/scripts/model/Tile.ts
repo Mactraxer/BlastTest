@@ -1,18 +1,32 @@
-import { Position, TileType } from "../GameConfig";
-
-export enum TileColor {
-    Red = "red",
-    Green = "green",
-    Blue = "blue",
-    Yellow = "yellow"
+export enum TileType {
+    RED,
+    BLUE,
+    GREEN,
+    YELLOW,
+    PURPLE,
+    ROW_CLEAR,
+    COL_CLEAR,
+    RADIUS_CLEAR,
+    BOMB,
 }
 
-// Tile.ts
-export class Tile {
+export class Position {
     constructor(
-        public readonly type: TileType,
-        public position: Position
+        public readonly x: number,
+        public readonly y: number,
+        public readonly row: number,
+        public readonly column: number
     ) {}
+}
+
+export class Tile {
+    public readonly type: TileType;
+    public position: Position;
+
+    constructor(type: TileType, position: Position) {
+        this.type = type;
+        this.position = position;
+    }
 
     public isBooster(): boolean {
         return this.type === TileType.BOMB;

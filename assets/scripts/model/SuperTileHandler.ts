@@ -1,15 +1,17 @@
-import { TileType } from "../GameConfig";
 import { Board } from "./Board";
-import { GameState } from "./GameState";
-import { Tile } from "./Tile";
+import { MoveCounter } from "./MoveCounter";
+import { ScoreCounter } from "./ScoreCounter";
+import { Tile, TileType } from "./Tile";
 
 export class SuperTileHandler {
-    private board: Board;
-    private state: GameState;
+    private readonly board: Board;
+    private readonly scoreCounter: ScoreCounter;
+    private readonly moveCounter: MoveCounter;
 
-    constructor(board: Board, state: GameState) {
+    constructor(board: Board, scoreCounter: ScoreCounter, moveCounter: MoveCounter) {
         this.board = board;
-        this.state = state;
+        this.scoreCounter = scoreCounter;
+        this.moveCounter = moveCounter;
     }
 
     public handleSuperTile(tile: Tile) : void {
@@ -33,13 +35,11 @@ export class SuperTileHandler {
         this.board.setCollapseTiles(removeTiles);
         this.board.removeTiles(removeTiles.map(m => m.position));
 
-        this.state.update(
-            this.state.score + removeTiles.length * removeTiles.length * 10,
-            this.state.movesLeft - 1
-        );
+        this.scoreCounter.updateScore(removeTiles);
+        this.moveCounter.updateMovesLeft();
     }
 
-    public handleColumnClear(tile: Tile) : Tile[] {
+    private handleColumnClear(tile: Tile) : Tile[] {
         let removeTiles: Tile[] = [];
         for (let row = 0; row < this.board.config.verticalTileCount; row++) {
             removeTiles.push(this.board.grid[row][tile.position.column]);
@@ -48,7 +48,7 @@ export class SuperTileHandler {
         return removeTiles;
     }
 
-    public handleRowClear(tile: Tile) : Tile[] {
+    private handleRowClear(tile: Tile) : Tile[] {
         let removeTiles: Tile[] = [];
         for (let column = 0; column < this.board.config.horizontalTileCount; column++) {
             removeTiles.push(this.board.grid[tile.position.row][column]);
@@ -57,7 +57,7 @@ export class SuperTileHandler {
         return removeTiles;
     }
 
-    public handleRadiusClear(tile: Tile) : Tile[] {
+    private handleRadiusClear(tile: Tile) : Tile[] {
         const removeTiles: Tile[] = [];
         const [centerRow, centerColumn] = [tile.position.row, tile.position.column];
         const radius = this.board.config.superTileRadius;
@@ -76,8 +76,7 @@ export class SuperTileHandler {
         return removeTiles;
     }
 
-
-    public handleBomb(tile: Tile) : Tile[] {
+    private handleBomb(tile: Tile) : Tile[] {
         return [].concat(...this.board.grid);
     }
 }

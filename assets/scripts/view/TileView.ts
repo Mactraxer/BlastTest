@@ -1,9 +1,7 @@
-import { Position, TileType } from "../GameConfig";
-import { Tile } from "../model/Tile";
+import { Position, Tile, TileType } from "../model/Tile";
 
 const { ccclass, property } = cc._decorator;
 
-// TileView.ts
 @ccclass
 export class TileView extends cc.Component {
     @property(cc.Sprite)
@@ -11,9 +9,25 @@ export class TileView extends cc.Component {
 
     @property(cc.Label)
     private label: cc.Label = null;
+    
+    @property(cc.Integer)
+    private animationTileRemoveDuration = 0.2;
+
+    @property(cc.Integer)
+    private animationTileRemoveScaleDownValue = 0;
+
+    @property(cc.Integer)
+    private animationTileRemoveOpacityDownValue = 0;
+
+    @property(cc.Integer)
+    private animationTileAppearDuration = 0.3;
+
+    @property(cc.Integer)
+    private animationTileAppearScaleUpValue = 1;
+
+    private _onTileClick: (pos: Position) => void = null;
 
     public position: Position = null;
-    private _onTileClick: (pos: Position) => void = null;
 
     protected onDisable(): void {
         this.node.off(cc.Node.EventType.TOUCH_END, this.onClick, this);
@@ -25,7 +39,7 @@ export class TileView extends cc.Component {
 
     public init(tile: Tile, position: Position, scale: cc.Vec2, onClick: (pos: Position) => void): void {
         this.position = position;
-        this.node.position = cc.v3(position.x, position.y);
+        this.node.setPosition(cc.v3(position.x, position.y));
         this.node.width = scale.x;
         this.node.height = scale.y;
         this._onTileClick = onClick;
@@ -81,16 +95,10 @@ export class TileView extends cc.Component {
         this.label.string = tile.position.row + "," + tile.position.column;
     }
 
-    private onClick(): void {
-        if (this._onTileClick) {
-            this._onTileClick(this.position);
-        }
-    }
-
     public animateRemove(): Promise<void> {
         return new Promise(resolve => {
             cc.tween(this.node)
-                .to(0.2, { scale: 0, opacity: 0 })
+                .to(this.animationTileRemoveDuration, { scale: this.animationTileRemoveScaleDownValue, opacity: this.animationTileRemoveOpacityDownValue })
                 .call(() => {
                     this.node.active = false;
                     resolve();
@@ -105,9 +113,15 @@ export class TileView extends cc.Component {
         
         return new Promise(resolve => {
             cc.tween(this.node)
-                .to(0.3, { scale: 1 }, { easing: 'backOut' })
+                .to(this.animationTileAppearDuration, { scale: this.animationTileAppearScaleUpValue }, { easing: 'backOut' })
                 .call(resolve)
                 .start();
         });
+    }
+
+    private onClick(): void {
+        if (this._onTileClick) {
+            this._onTileClick(this.position);
+        }
     }
 }

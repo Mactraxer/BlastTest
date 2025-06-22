@@ -1,34 +1,49 @@
-import { GameConfig } from "../GameConfig";
+import { GameConfig } from "../config/GameConfig";
+import LocalEventEmitter from "../EventEmitter";
+import { GameEvents, MovesChangedEvent, ScoreChangedEvent } from "../GameEvents";
 
-// GameState.ts
 export class GameState {
-    public get movesLeft(): number {
-        return this._movesLeft;
-    }
-    private set movesLeft(value: number) {
-        this._movesLeft = value;
-    }
-    public get score(): number {
-        return this._score;
-    }
-    private set score(value: number) {
-        this._score = value;
-    }
+    private score: number;
+    private movesLeft: number;
+    private shuffleCount: number;
+    
+    public isGameOver: boolean;
+    public isGameWon: boolean;
+    public gameEventEmitter = new LocalEventEmitter<GameEvents>();
 
     constructor(
-        private _score: number,
-        private _movesLeft: number,
-        public isGameOver: boolean,
-        public isGameWon: boolean,
-        public shuffleCount: number
-    ) {}
+        score: number,
+        movesLeft: number,
+        isGameOver: boolean,
+        isGameWon: boolean,
+        shuffleCount: number
+    ) {
+        this.score = score;
+        this.movesLeft = movesLeft;
+        this.isGameOver = isGameOver;
+        this.isGameWon = isGameWon;
+        this.shuffleCount = shuffleCount;
+    }
     
     public static initial(config: GameConfig): GameState {
         return new GameState(0, config.maxMoves, false, false, 0);
     }
 
-    public update(score: number, moves: number): void {
+    public updateScore(score: number): void {
         this.score = score;
-        this.movesLeft = moves;
+        this.gameEventEmitter.emit(ScoreChangedEvent, { score: this.score });
+    }
+
+    public updateMovesLeft(movesLeft: number): void {
+        this.movesLeft = movesLeft;
+        this.gameEventEmitter.emit(MovesChangedEvent, { moves: this.movesLeft });
+    }
+
+    public reset(config: GameConfig) {
+        this.score = 0;
+        this.movesLeft = config.maxMoves;
+        this.isGameOver = false;
+        this.isGameWon = false;
+        this.shuffleCount = 0;
     }
 }

@@ -1,31 +1,31 @@
 import { Board } from "./Board";
-import { GameState } from "./GameState";
 import { Tile } from "./Tile";
 import { BoosterType } from "./BoosterType";
+import { ScoreCounter } from "./ScoreCounter";
 
 export class BoosterHandler {
 
     private board: Board;
-    private state: GameState;
     private activeBooster: BoosterType;
     private firstSelectionTile: Tile | null;
     private secondSelectionTile: Tile | null;
+    private scoreCounter: ScoreCounter;
     
-    constructor(board: Board, state: GameState) {
+    constructor(board: Board, scoreCounter: ScoreCounter) {
         this.board = board;
         this.activeBooster = BoosterType.None;
-        this.state = state;
+        this.scoreCounter = scoreCounter;
     }
     
-    isSelectedBooster(): boolean {
+    public isSelectedBooster(): boolean {
         return this.activeBooster !== BoosterType.None;
     }
 
-    selectBooster(boosterType: BoosterType) {
+    public selectBooster(boosterType: BoosterType) : void {
         this.activeBooster = boosterType;
     }
     
-    useActiveBoosterIn(tile: Tile) {
+    public useActiveBoosterIn(tile: Tile) : void {
         this.handleBooster(tile);
     }
     
@@ -51,7 +51,7 @@ export class BoosterHandler {
         }
     }
 
-    private bombTile(tile: Tile) {
+    private bombTile(tile: Tile) : void {
         const removeTiles: Tile[] = [];
         const [centerRow, centerColumn] = [tile.position.row, tile.position.column];
         const radius = this.board.config.superTileRadius;
@@ -70,13 +70,10 @@ export class BoosterHandler {
         this.board.setCollapseTiles(removeTiles);
         this.board.removeTiles(removeTiles.map(m => m.position));
 
-        this.state.update(
-            this.state.score + removeTiles.length * removeTiles.length * 10,
-            this.state.movesLeft - 1
-        );
+        this.scoreCounter.updateScore(removeTiles);
     }
 
-    private teleportTiles() {
+    private teleportTiles() : void {
         const [rowFirstTitle, columnFirstTitle] = this.board.getIndexes(this.firstSelectionTile.position);
         const [rowSecondTitle, columnSecondTitle] = this.board.getIndexes(this.secondSelectionTile.position);
 
