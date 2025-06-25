@@ -1,7 +1,7 @@
 import { GameConfig } from "../config/GameConfig";
 import { LevelViewFactory } from "../factory/LevelViewFactory";
 import { TileViewFactory } from "../factory/TileViewFactory";
-import { MovesChangedEvent, RestartEventName, ScoreChangedEvent } from "../GameEvents";
+import { LevelLoseEvent, LevelWinEvent, MovesChangedEvent, RestartEventName, ScoreChangedEvent } from "../GameEvents";
 import { GameState } from "../model/GameState";
 import { GameView } from "../view/GameView";
 import { LevelController } from "./LevelController";
@@ -27,8 +27,6 @@ export class GameController {
         this.gameNode = gameNode;
 
         this.state = GameState.initial(config);
-        this.state.gameEventEmitter.on(ScoreChangedEvent, this.handleScoreChanged.bind(this));
-        this.state.gameEventEmitter.on(MovesChangedEvent, this.handleMovesChanged.bind(this));
 
         this.gameView = this.gameNode.getComponent(GameView);
         this.gameView.node.on(RestartEventName, this.onTapRestartButton, this);
@@ -38,27 +36,24 @@ export class GameController {
     public nextLevel() : void {
         this.gameView.hideLose();
         this.gameView.hideWin();
-        const levelView = this.levelViewFactory.createLevel(this.gameNode);
-        this.level = new LevelController(levelView, this.config, this.tileViewFactory, this.state);
-    }
-    
-    private handleMovesChanged(event: {moves: number}) : void {
-        if (event.moves <= 0) {
+
+        if (this.level) {
+            this.level.gameEventEmitter.off(LevelWinEvent, this.handleWinLevel.bind(this));
+            this.level.gameEventEmitter.off(LevelLoseEvent, this.handleLoseLevel.bind(this));
             this.disposeLevel();
-            this.levelLose();
         }
+
+        const levelView = this.levelViewFactory.createLevel();
+        levelView.init(this.config.targetScore, this.config.maxMoves);
+        
+        this.level = new LevelController(levelView, this.config, this.tileViewFactory, this.state);
+        this.level.gameEventEmitter.on(LevelWinEvent, this.handleWinLevel.bind(this));
+        this.level.gameEventEmitter.on(LevelLoseEvent, this.handleLoseLevel.bind(this));
     }
     
     private disposeLevel() : void {
         this.level.hide();
         this.level.destroy();
-    }
-
-    private handleScoreChanged(event: {score: number}) : void {
-        if (event.score >= this.config.targetScore) {
-            this.disposeLevel();
-            this.levelWin();
-        }
     }
     
     private levelLose() : void {
@@ -72,5 +67,13 @@ export class GameController {
     private onTapRestartButton() : void {
         this.state.reset(this.config);
         this.nextLevel();
+    }
+
+    private handleWinLevel = () : void => {
+        this.levelWin();
+    }
+
+    private handleLoseLevel = () : void => {
+        this.levelLose();
     }
 }

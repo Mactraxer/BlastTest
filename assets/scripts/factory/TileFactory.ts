@@ -28,12 +28,19 @@ export class TileFactory {
 
     private getRandomNormalType(): TileType {
         const types = [TileType.RED, TileType.BLUE, TileType.GREEN, 
-                      TileType.YELLOW, TileType.PURPLE];
+                      TileType.YELLOW, TileType.PURPURE];
         return types[Math.floor(Math.random() * types.length)];
     }
 
     private getRandomSuperType(): TileType {
-        const types = [TileType.ROW_CLEAR, TileType.COL_CLEAR, TileType.RADIUS_CLEAR];
-        return types[Math.floor(Math.random() * types.length)];
+        const rand = Math.random();
+        if (rand < 0.8) {
+            const types = [TileType.ROW_CLEAR, TileType.COL_CLEAR];
+            return types[Math.floor(Math.random() * types.length)];
+        } else if (rand < 0.95) {
+            return TileType.RADIUS_CLEAR;
+        } else {
+            return TileType.BOMB;
+        }
     }
 }

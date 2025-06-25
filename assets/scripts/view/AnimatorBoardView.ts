@@ -1,5 +1,6 @@
 import { TileDropMove } from "../model/Board";
 import { Position, Tile } from "../model/Tile";
+import { BoardView } from "./BoardView";
 import { TileView } from "./TileView";
 
 const {ccclass, property} = cc._decorator;
@@ -43,10 +44,12 @@ export class AnimatorBoardView extends cc.Component {
     @property(cc.Integer)
     private animationCollapseSimpleTileScaleDownValue = 0;
 
+    private boardView: BoardView;
     private tileViews: Map<string, TileView>;
 
-    public setup(tileViews: Map<string, TileView>) : void {
+    public setup(tileViews: Map<string, TileView>, boardView: BoardView) : void {
         this.tileViews = tileViews;
+        this.boardView = boardView;
     }
 
     public async animateSwap(tile1: Tile, tile2: Tile) :  Promise<void> {
@@ -69,7 +72,7 @@ export class AnimatorBoardView extends cc.Component {
     public async animateCollapsesToMegaTile(collapseTiles: Tile[], superTileStartPosition: Position) : Promise<void> {
         const animations: Promise<void>[] = [];
 
-        const centerPos = new cc.Vec3(superTileStartPosition.x, superTileStartPosition.y);
+        const centerPos = this.boardView.getViewTilePosition(superTileStartPosition.row, superTileStartPosition.column);
 
         for (const tile of collapseTiles) {
             const tileView = this.tileViews.get(`${tile.position.row},${tile.position.column}`);
@@ -79,7 +82,7 @@ export class AnimatorBoardView extends cc.Component {
 
             animations.push(new Promise(resolve => {
                 cc.tween(node)
-                    .to(this.animationCollapseToMegaTileDuration, { position: centerPos, scale: this.animationCollapseToMegaTileScale }, { easing: 'backIn' })
+                    .to(this.animationCollapseToMegaTileDuration, { position: new cc.Vec3(centerPos.x, centerPos.y), scale: this.animationCollapseToMegaTileScale }, { easing: 'backIn' })
                     .call(() => {
                         tileView.node.active = false;
                         resolve();
@@ -111,12 +114,13 @@ export class AnimatorBoardView extends cc.Component {
 
         dropMoves.forEach(tile => {
             if (tile.fromRow === verticalTileCount) {
-                const tileView = this.tileViews.get(`${tile.toRow},${tile.col}`);
+                const tileView = this.tileViews.get(`${tile.toRow},${tile.column}`);
                 const node = tileView.node;
+                const tileNewViewPosition = this.boardView.getViewTilePosition(tile.toRow, tile.column);
                 animations.push(new Promise(resolve => {
                     cc.tween(node)
                     .delay(this.animationDropNewDelayBetweenEach)
-                    .to(this.animationDropNewDuration, { position: new cc.Vec3(tile.newPosition.x, tile.newPosition.y) }, { easing: 'bounceOut' })
+                    .to(this.animationDropNewDuration, { position: new cc.Vec3(tileNewViewPosition.x, tileNewViewPosition.y) }, { easing: 'bounceOut' })
                     .call(() => resolve())
                     .start();
                 }));
@@ -157,7 +161,8 @@ export class AnimatorBoardView extends cc.Component {
         for (const dropMove of dropMoves) {
             if (dropMove.fromRow == verticalTileCount) continue;
 
-            const tileView = this.tileViews.get(`${dropMove.fromRow},${dropMove.newPosition.column}`);
+            const tileViewNewPosition = this.boardView.getViewTilePosition(dropMove.toRow, dropMove.column);
+            const tileView = this.tileViews.get(`${dropMove.fromRow},${dropMove.column}`);
             if (tileView === null) {
                 console.log("tileView is null");
             }
@@ -166,7 +171,7 @@ export class AnimatorBoardView extends cc.Component {
             if (node && cc.isValid(node)) {
                 animations.push(new Promise(resolve => {
                     cc.tween(node)
-                        .to(this.animationTileFallDuration, { position: new cc.Vec3(dropMove.newPosition.x, dropMove.newPosition.y) }, { easing: 'quadOut' })
+                        .to(this.animationTileFallDuration, { position: new cc.Vec3(tileViewNewPosition.x, tileViewNewPosition.y) }, { easing: 'quadOut' })
                         .call(() => resolve())
                         .start();
                 }));

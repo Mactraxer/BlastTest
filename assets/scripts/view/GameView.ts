@@ -17,10 +17,12 @@ export class GameView extends cc.Component {
     private winRestartButton: cc.Button = null;
 
     public showWin() : void {
+        this.loseNode.active = false;
         this.winNode.active = true;
     }
 
     public showLose() : void {
+        this.winNode.active = false;
         this.loseNode.active = true;
     }
 

@@ -1,4 +1,5 @@
 import { BoardView } from "./BoardView";
+import { BoosterView } from "./BoosterView";
 import { MoveCounterView } from "./MoveCounterView";
 import { ScoreCounterView } from "./ScoreCounterView";
 
@@ -6,9 +7,6 @@ const  {ccclass, property} = cc._decorator;
 
 @ccclass
 export class LevelView extends cc.Component {
-    public static readonly BombTapEventName = 'onTapBoombButton';
-    public static readonly TeleportTapEventName = 'onTapTeleportButton';
-    
     @property(ScoreCounterView)
     private scoreCounterView: ScoreCounterView = null;
     
@@ -17,40 +15,32 @@ export class LevelView extends cc.Component {
     
     @property(BoardView)
     public boardView: BoardView = null;
-    
-    @property(cc.Button)
-    private bombButton: cc.Button = null;
-    
-    @property(cc.Button)
-    private teleportButton: cc.Button = null;
-    
-    protected onLoad(): void {      
-        this.bombButton.node.on(cc.Node.EventType.TOUCH_END, this.onTapBoombButton, this);
-        this.teleportButton.node.on(cc.Node.EventType.TOUCH_END, this.onTapTeleportButton, this);
-    }
-    
-    protected onDestroy(): void {
-        this.bombButton.node.off(cc.Node.EventType.TOUCH_END, this.onTapBoombButton, this);
-        this.teleportButton.node.off(cc.Node.EventType.TOUCH_END, this.onTapTeleportButton, this);
+
+    @property(BoosterView)
+    public boosterView: BoosterView = null;
+
+    public init(targetScore: number, startMovesCount: number) : void {
+        this.scoreCounterView.init(targetScore);
+        this.moveCounterView.updateMoves(startMovesCount);
     }
 
-    public hide() {
+    public hide() : void {
         this.node.active = false;
     }
 
-    public updateScore(score: number) {
+    public updateScore(score: number) : void {
         this.scoreCounterView.updateScore(score);
     }
 
-    public updateMoves(moves: number) {
+    public updateMoves(moves: number) : void {
         this.moveCounterView.updateMoves(moves);
     }
 
-    public onTapBoombButton() {
-        this.node.emit(LevelView.BombTapEventName);
+    private onTapBoombButton() : void {
+        this.node.emit(BoosterView.BombTapEventName);
     }
 
-    public onTapTeleportButton() {
-        this.node.emit(LevelView.TeleportTapEventName);
+    private onTapTeleportButton() : void {
+        this.node.emit(BoosterView.TeleportTapEventName);
     }
 }

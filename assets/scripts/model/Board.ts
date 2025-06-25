@@ -6,8 +6,7 @@ export interface TileDropMove {
     tile: Tile;
     fromRow: number;
     toRow: number;
-    col: number;
-    newPosition: Position;
+    column: number;
 }
 
 export class Board {
@@ -32,8 +31,8 @@ export class Board {
         this.grid = [];
         for (let row = 0; row < this.config.verticalTileCount; row++) {
             this.grid[row] = [];
-            for (let collumn = 0; collumn < this.config.horizontalTileCount; collumn++) {
-                this.grid[row][collumn] = this.tileFactory.createNormalTile(this.getPositionBy(row,collumn));
+            for (let column = 0; column < this.config.horizontalTileCount; column++) {
+                this.grid[row][column] = this.tileFactory.createNormalTile(this.getPositionBy(row,column));
             }
         }
         
@@ -57,23 +56,20 @@ export class Board {
     }
     
     public createMegaTile(position: Position) : void {
-        const indexes = this.getIndexes(position);
         this.createdMegaTileStartPosition = position;
-        this.grid[indexes[0]][indexes[1]] = this.tileFactory.createTileMegaTile(position);
-        this.createdMegaTile = this.grid[indexes[0]][indexes[1]];
+        this.grid[position.row][position.column] = this.tileFactory.createTileMegaTile(position);
+        this.createdMegaTile = this.grid[position.row][position.column];
     }
 
     public getTileAt(position: Position): Tile | null {
         if (!this.isPositionValid(position)) return null;
-        const indexes = this.getIndexes(position);
-        return this.grid[indexes[0]][indexes[1]];
+        return this.grid[position.row][position.column];
     }
 
     public removeTiles(positions: Position[]): void {
         positions.forEach(pos => {
             if (this.isPositionValid(pos)) {
-                const indexes = this.getIndexes(pos);
-                this.grid[indexes[0]][indexes[1]] = null;
+                this.grid[pos.row][pos.column] = null;
             }
         });
 
@@ -81,55 +77,39 @@ export class Board {
         this.fillEmptySpaces();
     }
 
-    public getIndexes(position: Position): [number, number] {
-        const collumn = position.x / this.config.tileWidth;
-        const row = ((this.config.verticalTileCount - 1) * this.config.tileHeight - position.y)  / this.config.tileHeight;
-        return [row, collumn];
-    }
-
     public getPositionBy(row: number, collumn: number): Position {
-        let x = collumn * this.config.tileWidth;
-        let y = ((this.config.verticalTileCount - 1) - row) * this.config.tileHeight;
-        return new Position(x, y, row, collumn);
+        return new Position(0, 0, row, collumn);
     }
 
     public getTopNeighborsPosition(position: Position): Position | null {
-        const indexes = this.getIndexes(position);
+        if (position.row == 0) return null;
 
-        if (indexes[0] == 0) return null;
-
-        return this.getPositionBy(indexes[0] - 1, indexes[1]);
+        return this.getPositionBy(position.row - 1, position.column);
     }
 
     public getBottomNeighborsPosition(position: Position): Position | null {
-        const indexes = this.getIndexes(position);
+        if (position.row == this.config.verticalTileCount - 1) return null;
 
-        if (indexes[0] == this.config.verticalTileCount - 1) return null;
-
-        return this.getPositionBy(indexes[0] + 1, indexes[1]);
+        return this.getPositionBy(position.row + 1, position.column);
     }
 
     public getLeftNeighborsPosition(position: Position): Position | null {
-        const indexes = this.getIndexes(position);
+        if (position.column == 0) return null;
 
-        if (indexes[1] == 0) return null;
-
-        return this.getPositionBy(indexes[0], indexes[1] - 1);
+        return this.getPositionBy(position.row, position.column - 1);
     }
 
     public getRightNeighborsPosition(position: Position): Position | null {
-        const indexes = this.getIndexes(position);
+        if (position.column == this.config.horizontalTileCount - 1) return null;
 
-        if (indexes[1] == this.config.horizontalTileCount - 1) return null;
-
-        return this.getPositionBy(indexes[0], indexes[1] + 1);
+        return this.getPositionBy(position.row, position.column + 1);
     }
 
     public isPositionValid(position: Position): boolean {
         if (!position) return false;
 
-        return position.x >= 0 && position.x <= (this.config.horizontalTileCount - 1) * this.config.tileWidth  &&
-               position.y >= 0 && position.y <= (this.config.verticalTileCount - 1) * this.config.tileHeight;
+        return position.row >= 0 && position.row < this.config.verticalTileCount  &&
+               position.column >= 0 && position.column < this.config.horizontalTileCount;
     }
 
     private collapseColumns(): void {
@@ -145,17 +125,16 @@ export class Board {
                 else if (this.grid[row][collumn] !== null && emptyY !== this.config.verticalTileCount) {
                     // Перемещаем тайл вниз
                     this.grid[emptyY][collumn] = this.grid[row][collumn];
-                    this.grid[emptyY][collumn].position = this.getPositionBy(emptyY, collumn);
+                    this.grid[emptyY][collumn].position = new Position(0, 0, emptyY, collumn);
                     this.grid[row][collumn] = null;
 
                     this.dropMoves.push({
                         tile: this.grid[emptyY][collumn],
                         fromRow: row,
                         toRow: emptyY,
-                        col: collumn,
-                        newPosition: this.getPositionBy(emptyY, collumn),
+                        column: collumn,
                     });
-                    // // Ищем следующую пустую ячейку выше
+                    // Ищем следующую пустую ячейку выше
                     while (emptyY >= 0 && this.grid[emptyY][collumn] !== null) {
                         emptyY--;
                     }
@@ -175,8 +154,7 @@ export class Board {
                         tile: this.grid[row][collumn],
                         fromRow: this.config.verticalTileCount,
                         toRow: row,
-                        col: collumn,
-                        newPosition: newPosition,
+                        column: collumn,
                     });
                 }
             }

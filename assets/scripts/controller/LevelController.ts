@@ -1,7 +1,8 @@
 import { GameConfig } from "../config/GameConfig";
+import LocalEventEmitter from "../EventEmitter";
 import { TileFactory } from "../factory/TileFactory";
 import { TileViewFactory } from "../factory/TileViewFactory";
-import { MovesChangedEvent, ScoreChangedEvent } from "../GameEvents";
+import { GameEvents, LevelLoseEvent, LevelWinEvent, MovesChangedEvent, ScoreChangedEvent } from "../GameEvents";
 import { Board } from "../model/Board";
 import { BoosterHandler } from "../model/BoosterHandler";
 import { BoosterType } from "../model/BoosterType";
@@ -12,9 +13,12 @@ import { SimpleTileHandler } from "../model/SimpleTileHandler";
 import { SuperTileHandler } from "../model/SuperTileHandler";
 import { Position } from "../model/Tile";
 import { TileMatcher } from "../model/TileMatcher";
+import { BoosterView } from "../view/BoosterView";
 import { LevelView } from "../view/LevelView";
 
 export class LevelController {
+    public gameEventEmitter = new LocalEventEmitter<GameEvents>();
+    
     private readonly board: Board;
     private readonly tileMatcher: TileMatcher;
     private readonly superTileHandler: SuperTileHandler;
@@ -22,6 +26,8 @@ export class LevelController {
     private readonly simpleTileHandler: SimpleTileHandler;
     private readonly state: GameState;
     private readonly levelView: LevelView;
+
+    private updateInProgress: boolean;
 
     constructor(
         levelView: LevelView,
@@ -39,9 +45,10 @@ export class LevelController {
         this.tileMatcher = new TileMatcher(config, this.board);
         this.simpleTileHandler = new SimpleTileHandler(this.board, scoreCounter, moveCounter, this.tileMatcher, config.superTileThreshold);
         this.superTileHandler = new SuperTileHandler(this.board, scoreCounter, moveCounter);
-        this.boosterHandler = new BoosterHandler(this.board, scoreCounter);
+        this.boosterHandler = new BoosterHandler(this.board, scoreCounter, levelView.boosterView, config.boosterTeleportCount, config.boosterBombCount);
 
         this.levelView = levelView;
+
         this.levelView.boardView.initialize(
             tileViewFactory,
             config.horizontalTileCount,
@@ -52,8 +59,8 @@ export class LevelController {
             this.handleTileClick.bind(this)
         );
 
-        this.levelView.node.on(LevelView.BombTapEventName, this.handleBoombButton, this);
-        this.levelView.node.on(LevelView.TeleportTapEventName, this.handleTeleportButton, this);
+        this.levelView.node.on(BoosterView.BombTapEventName, this.handleBoombButton, this);
+        this.levelView.node.on(BoosterView.TeleportTapEventName, this.handleTeleportButton, this);
 
         this.state.gameEventEmitter.on(ScoreChangedEvent, this.handleScoreChanged);
         this.state.gameEventEmitter.on(MovesChangedEvent, this.handleMovesChanged);
@@ -63,8 +70,8 @@ export class LevelController {
         this.state.gameEventEmitter.off(ScoreChangedEvent, this.handleScoreChanged);
         this.state.gameEventEmitter.off(MovesChangedEvent, this.handleMovesChanged);
 
-        this.levelView.node.off(LevelView.BombTapEventName, this.handleBoombButton, this);
-        this.levelView.node.off(LevelView.TeleportTapEventName, this.handleTeleportButton, this);
+        this.levelView.node.off(BoosterView.BombTapEventName, this.handleBoombButton, this);
+        this.levelView.node.off(BoosterView.TeleportTapEventName, this.handleTeleportButton, this);
         this.levelView.destroy();
     }
 
@@ -73,11 +80,12 @@ export class LevelController {
     }
 
     private async selectTile(position: Position): Promise<void> {
-        if (this.state.isGameOver || this.state.isGameWon) return;
+        if (this.state.isLevelLose || this.state.isLevelWin) return;
 
         const tile = this.board.getTileAt(position);
         if (!tile) return;
-        
+        if(this.updateInProgress) return;
+
         if (this.boosterHandler.isSelectedBooster()) {
             this.boosterHandler.useActiveBoosterIn(tile);
         } else if(tile.isSuperTile()) {
@@ -86,13 +94,21 @@ export class LevelController {
             this.simpleTileHandler.handleSimpleTile(tile);
         }
 
+        this.updateInProgress = true;
+        this.boosterHandler.blockBoosters();
         await this.levelView.boardView.updateView(this.board, tile);
+        this.updateInProgress = false;
+        this.boosterHandler.unblockBoosters();
 
         if (!this.boosterHandler.isSelectedBooster()) {
             this.board.clearDropMoves();
         }
 
-        //TODO: Перенести изменение очков сюда, чтобы успевалась проигрываться анимация до появляения экранов win/lose
+        if (this.state.isLevelLose) {
+            this.gameEventEmitter.emit(LevelLoseEvent, null);
+        } else if (this.state.isLevelWin) {
+            this.gameEventEmitter.emit(LevelWinEvent, null);
+        }
     }
     
     private handleTeleportButton() : void {

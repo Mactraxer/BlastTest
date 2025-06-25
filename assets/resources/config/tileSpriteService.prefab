@@ -1,0 +1,195 @@
+[
+  {
+    "__type__": "cc.Prefab",
+    "_name": "",
+    "_objFlags": 0,
+    "_native": "",
+    "data": {
+      "__id__": 1
+    },
+    "optimizationPolicy": 0,
+    "asyncLoadAssets": false,
+    "readonly": false
+  },
+  {
+    "__type__": "cc.Node",
+    "_name": "TileSpriteService",
+    "_objFlags": 0,
+    "_parent": null,
+    "_children": [],
+    "_active": true,
+    "_components": [
+      {
+        "__id__": 2
+      }
+    ],
+    "_prefab": {
+      "__id__": 13
+    },
+    "_opacity": 255,
+    "_color": {
+      "__type__": "cc.Color",
+      "r": 255,
+      "g": 255,
+      "b": 255,
+      "a": 255
+    },
+    "_contentSize": {
+      "__type__": "cc.Size",
+      "width": 0,
+      "height": 0
+    },
+    "_anchorPoint": {
+      "__type__": "cc.Vec2",
+      "x": 0.5,
+      "y": 0.5
+    },
+    "_trs": {
+      "__type__": "TypedArray",
+      "ctor": "Float64Array",
+      "array": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "_eulerAngles": {
+      "__type__": "cc.Vec3",
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "_skewX": 0,
+    "_skewY": 0,
+    "_is3DNode": false,
+    "_groupIndex": 0,
+    "groupIndex": 0,
+    "_id": ""
+  },
+  {
+    "__type__": "29bbcNm41xKCaxE26i6zkrX",
+    "_name": "",
+    "_objFlags": 0,
+    "node": {
+      "__id__": 1
+    },
+    "_enabled": true,
+    "config": {
+      "__id__": 3
+    },
+    "_id": ""
+  },
+  {
+    "__type__": "TileSpriteConfig",
+    "entries": [
+      {
+        "__id__": 4
+      },
+      {
+        "__id__": 5
+      },
+      {
+        "__id__": 6
+      },
+      {
+        "__id__": 7
+      },
+      {
+        "__id__": 8
+      },
+      {
+        "__id__": 9
+      },
+      {
+        "__id__": 10
+      },
+      {
+        "__id__": 11
+      },
+      {
+        "__id__": 12
+      }
+    ]
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 0,
+    "sprite": {
+      "__uuid__": "7a53a821-0e6d-4e66-9c12-eadb3c1dd6d6"
+    }
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 1,
+    "sprite": {
+      "__uuid__": "dd82eaea-a471-473e-b2a7-4b337bb02a43"
+    }
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 2,
+    "sprite": {
+      "__uuid__": "62389875-1766-435f-acca-4dc5b5128712"
+    }
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 3,
+    "sprite": {
+      "__uuid__": "42f7ced2-2ce4-40cf-bf28-6d49ccee36c5"
+    }
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 4,
+    "sprite": {
+      "__uuid__": "c7c9a31d-fbd2-4248-9b10-f7a6821de48b"
+    }
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 5,
+    "sprite": {
+      "__uuid__": "1a3326a8-4ecf-4372-8e83-e5540eea95ba"
+    }
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 6,
+    "sprite": {
+      "__uuid__": "aceaf73f-89c6-46cc-beaf-9aca87f39b27"
+    }
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 7,
+    "sprite": {
+      "__uuid__": "21b06844-63a9-4d11-8b3c-34a56dc4540f"
+    }
+  },
+  {
+    "__type__": "TileSpriteEntry",
+    "type": 8,
+    "sprite": {
+      "__uuid__": "d662f864-cada-4ea3-9e77-177177779738"
+    }
+  },
+  {
+    "__type__": "cc.PrefabInfo",
+    "root": {
+      "__id__": 1
+    },
+    "asset": {
+      "__id__": 0
+    },
+    "fileId": "",
+    "sync": false
+  }
+]

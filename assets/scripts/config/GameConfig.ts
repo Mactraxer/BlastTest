@@ -1,4 +1,6 @@
 export interface GameConfig {
+    boosterTeleportCount: number;
+    boosterBombCount: number;
     tileScore: number;
     tileWidth: number;
     tileHeight: number;

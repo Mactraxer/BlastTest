@@ -1,13 +1,13 @@
 export enum TileType {
-    RED,
-    BLUE,
-    GREEN,
-    YELLOW,
-    PURPLE,
-    ROW_CLEAR,
-    COL_CLEAR,
-    RADIUS_CLEAR,
-    BOMB,
+    BLUE = 0,
+    PURPURE = 1,
+    YELLOW = 2,
+    GREEN = 3,
+    RED = 4,
+    BOMB = 5,
+    COL_CLEAR = 6,
+    RADIUS_CLEAR = 7,
+    ROW_CLEAR = 8,
 }
 
 export class Position {
@@ -28,10 +28,6 @@ export class Tile {
         this.position = position;
     }
 
-    public isBooster(): boolean {
-        return this.type === TileType.BOMB;
-    }
-
     public isSuperTile(): boolean {
         return [
             TileType.ROW_CLEAR,
@@ -42,7 +38,7 @@ export class Tile {
     }
 
     public isNormalTile(): boolean {
-        return !this.isBooster() && !this.isSuperTile();
+        return !this.isSuperTile();
     }
 }
 

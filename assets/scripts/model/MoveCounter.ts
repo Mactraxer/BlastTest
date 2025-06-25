@@ -14,7 +14,7 @@ export class MoveCounter {
         this.state.updateMovesLeft(this.movesLeft);
 
         if (this.movesLeft == 0) {
-            this.state.isGameOver = true;
+            this.state.isLevelLose = true;
         }
     }
 }

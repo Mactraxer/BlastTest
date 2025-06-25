@@ -1,4 +1,5 @@
 import { Position, Tile, TileType } from "../model/Tile";
+import { TileSpriteDatabase } from "../service/TileSpriteDataBase";
 
 const { ccclass, property } = cc._decorator;
 
@@ -55,44 +56,8 @@ export class TileView extends cc.Component {
 
         this.node.active = true;
         this.position = tile.position;
-        
-        switch (tile.type) {
-            case TileType.RED:
-                this.sprite.node.color = cc.Color.RED;
-                //this.label.string = "";
-                break;
-            // ... другие типы тайлов
-            case TileType.BLUE:
-                this.sprite.node.color = cc.Color.BLUE;
-                break;
-            case TileType.GREEN:
-                this.sprite.node.color = cc.Color.GREEN;
-                break;
-            case TileType.YELLOW:
-                this.sprite.node.color = cc.Color.YELLOW;
-                break;
-            case  TileType.PURPLE:
-                this.sprite.node.color = cc.Color.CYAN;
-                break;
-            case TileType.BOMB:
-                this.sprite.node.color = cc.Color.ORANGE;
-                this.label.string = "B";
-                break;
-            case TileType.COL_CLEAR:
-                this.label.string = "CC";
-                this.sprite.node.color = cc.Color.ORANGE;
-                break;
-            case  TileType.ROW_CLEAR:
-                this.label.string = "RowC";
-                this.sprite.node.color = cc.Color.ORANGE;
-                break;
-            case TileType.RADIUS_CLEAR:
-                this.label.string = "RadC";
-                this.sprite.node.color = cc.Color.ORANGE;
-                break;
-        }
-
-        this.label.string = tile.position.row + "," + tile.position.column;
+        this.sprite.spriteFrame = TileSpriteDatabase.instance.getSpriteForType(tile.type);
+        this.sprite.sizeMode = TileSpriteDatabase.instance.getSizeModeForType(tile.type);
     }
 
     public animateRemove(): Promise<void> {

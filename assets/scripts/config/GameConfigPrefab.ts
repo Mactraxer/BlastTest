@@ -31,4 +31,10 @@ export class GameConfigPrefab extends cc.Component {
 
     @property(cc.Integer)
     public superTileRadius: number = 2;
+
+    @property(cc.Integer)
+    public boosterTeleportCount: number = 5;
+
+    @property(cc.Integer)
+    public boosterBombCount: number = 5;
 }

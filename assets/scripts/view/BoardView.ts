@@ -19,25 +19,35 @@ export class BoardView extends cc.Component {
 
     private tileViews: Map<string, TileView>;
     private tileViewFactory: TileViewFactory;
-    private _onTileClick: (pos: Position) => void = null;
     private board: Board;
+    private _onTileClick: (pos: Position) => void = null;
+    private horizontalTileCount: number;
+    private verticalTileCount: number;
+    private tileWidth: number;
+    private tileHeight: number;
 
     public initialize(tileViewFactory: TileViewFactory, width: number, height: number, tileWidth: number, tileHeight: number, board: Board, onTileClick: (pos: Position) => void): void {
+        this.horizontalTileCount = width;
+        this.verticalTileCount = height;
+        this.tileWidth = tileWidth;
+        this.tileHeight = tileHeight;
         this._onTileClick = onTileClick;
         this.board =  board;
         this.tileViewFactory = tileViewFactory;
         this.tileViews = new Map<string, TileView>();
         this.setupView(width, tileWidth, height, tileHeight);
+
         for (let row = 0; row < height; row++) {
             for (let collumn = 0; collumn < width; collumn++) {
                 const tileView = this.tileViewFactory.createTileView(this.node);
-                tileView.init(board.grid[row][collumn], board.grid[row][collumn].position, new cc.Vec2(tileWidth, tileHeight), this.handleTileClick.bind(this));
+                tileView.init(board.grid[row][collumn], this.getViewTilePosition(row, collumn), new cc.Vec2(tileWidth, tileHeight), this.handleTileClick.bind(this));
                 this.tileViews.set(`${row},${collumn}`, tileView);
             }
         }
 
-        this.animator.setup(this.tileViews);
-        this.printGrid();
+        this.updateRenderOrder(height, width);
+
+        this.animator.setup(this.tileViews, this);
     }
 
     public async updateView(board: Board, selectedTile: Tile): Promise<void> {
@@ -55,14 +65,23 @@ export class BoardView extends cc.Component {
         this.updateFallenTiles(board.dropMoves);
         this.addNewTileViews(board);
         await this.animator.animateDropNew(board.dropMoves, this.board.config.verticalTileCount);
-        
-        this.printGrid();
     }
 
     private setupView(width: number, tileWidth: number, height: number, tileHeight: number) : void {
-        this.node.setPosition(cc.v2(-width * tileWidth / 2 + tileWidth / 2, -height * tileHeight / 2 + tileHeight / 2));
         this.node.width = width * tileWidth;
         this.node.height = height * tileHeight;
+    }
+
+    private updateRenderOrder(height: number, width: number) : void {
+        let siblingIndex = height * width + 1;
+
+        for (let row = 0; row < height; row++) {
+            for (let collumn = 0; collumn < width; collumn++) {
+                const tileView = this.tileViews.get(`${row},${collumn}`);
+                tileView.node.setSiblingIndex(siblingIndex);
+                siblingIndex--;
+            }
+        }
     }
 
     private handleTileClick(position: Position): void {
@@ -75,12 +94,12 @@ export class BoardView extends cc.Component {
         for (const dropMove of dropMoves) {
             if (dropMove.fromRow == this.board.config.verticalTileCount) continue;
             
-            const tileView = this.tileViews.get(`${dropMove.fromRow},${dropMove.col}`);
+            const tileView = this.tileViews.get(`${dropMove.fromRow},${dropMove.column}`);
             if (tileView === null) {
                 console.log("tileView is null");
             }
-            this.tileViews.delete(`${dropMove.fromRow},${dropMove.col}`);
-            this.tileViews.set(`${dropMove.toRow},${dropMove.col}`, tileView);
+            this.tileViews.delete(`${dropMove.fromRow},${dropMove.column}`);
+            this.tileViews.set(`${dropMove.toRow},${dropMove.column}`, tileView);
             tileView.updateView(dropMove.tile);
         }
     }
@@ -123,11 +142,28 @@ export class BoardView extends cc.Component {
                 
                 const tile = board.grid[row][collumn];
                 const tileView = this.tileViewFactory.createTileView(this.node);
-                const startPosition = new cc.Vec3(collumn * board.config.tileWidth, board.config.tileHeight * board.config.verticalTileCount);
-                tileView.init(tile, new Position(startPosition.x, startPosition.y, row, collumn), new cc.Vec2(this.board.config.tileWidth, this.board.config.tileHeight), this.handleTileClick.bind(this));
+                const startPosition = this.getViewTilePosition(-1, collumn);
+                tileView.init(tile, new Position(startPosition.x, startPosition.y, row, collumn), new cc.Vec2(this.tileWidth, this.tileHeight), this.handleTileClick.bind(this));
                 this.tileViews.set(`${row},${collumn}`, tileView);
             }
         }
+
+        this.updateRenderOrder(board.config.verticalTileCount, board.config.horizontalTileCount);
+    }
+
+    public getViewTilePosition(row: number, collumn: number): Position {
+        const boardOrigin = this.node.getPosition();
+
+        const boardWidth = this.tileWidth * this.horizontalTileCount;
+        const boardHeight = this.tileHeight * this.verticalTileCount;
+
+        const topLeftX = boardOrigin.x - boardWidth / 2;
+        const topLeftY = boardOrigin.y + boardHeight / 2;
+
+        const x = topLeftX + collumn * this.tileWidth + this.tileWidth / 2;
+        const y = topLeftY - row * this.tileHeight - this.tileHeight / 2;
+
+        return new Position(x, y, row, collumn);
     }
 
     private printGrid() : void {
